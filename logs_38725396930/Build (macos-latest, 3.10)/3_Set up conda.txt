@@ -1,0 +1,1240 @@
+﻿2025-05-17T17:12:37.3474420Z ##[group]Run conda-incubator/setup-miniconda@v3
+2025-05-17T17:12:37.3474670Z with:
+2025-05-17T17:12:37.3474800Z   python-version: 3.10
+2025-05-17T17:12:37.3474950Z   channels: conda-forge
+2025-05-17T17:12:37.3475110Z   activate-environment: compas_occt-dev
+2025-05-17T17:12:37.3475300Z   auto-activate-base: true
+2025-05-17T17:12:37.3475450Z   auto-update-conda: false
+2025-05-17T17:12:37.3475610Z   remove-profiles: true
+2025-05-17T17:12:37.3475760Z   conda-solver: libmamba
+2025-05-17T17:12:37.3475940Z   clean-patched-environment-file: true
+2025-05-17T17:12:37.3476140Z   run-post: true
+2025-05-17T17:12:37.3476270Z ##[endgroup]
+2025-05-17T17:12:37.4348120Z ##[group]Gathering Inputs...
+2025-05-17T17:12:37.4354670Z ##[endgroup]
+2025-05-17T17:12:37.4355160Z ##[group]Creating bootstrap condarc file in /Users/runner/.condarc...
+2025-05-17T17:12:37.4363320Z ##[endgroup]
+2025-05-17T17:12:37.4363660Z ##[group]Ensuring installer...
+2025-05-17T17:12:37.4363950Z Can we use bundled Miniconda?
+2025-05-17T17:12:37.4364410Z Can we download a custom installer by URL?
+2025-05-17T17:12:37.4364720Z Can we download Miniforge?
+2025-05-17T17:12:37.4365090Z Can we download Miniconda?
+2025-05-17T17:12:37.4365490Z ... will download Miniconda.
+2025-05-17T17:12:37.4366170Z Miniconda3-latest-MacOSX-arm64.sh
+2025-05-17T17:12:37.6916080Z Ensuring Installer...
+2025-05-17T17:12:37.6916460Z Checking for cached Miniconda3@latest...
+2025-05-17T17:12:37.6945310Z Did not find Miniconda3-latest-MacOSX-arm64.sh latest in cache
+2025-05-17T17:12:38.4685970Z Downloaded Miniconda3-latest-MacOSX-arm64.sh, ensuring extension .sh
+2025-05-17T17:12:38.4691750Z Caching Miniconda3@latest...
+2025-05-17T17:12:38.6444590Z Cached Miniconda3@latest: /Users/runner/hostedtoolcache/Miniconda3/latest/arm64!
+2025-05-17T17:12:38.6445680Z ##[endgroup]
+2025-05-17T17:12:38.6446120Z ##[group]Running installer...
+2025-05-17T17:12:38.6473820Z [command]/bin/bash /Users/runner/work/_temp/0833c2c6-9b08-477d-9d73-47e092ea02aa.sh -f -b -p /Users/runner/miniconda3
+2025-05-17T17:12:38.6744450Z PREFIX=/Users/runner/miniconda3
+2025-05-17T17:12:39.0354140Z Unpacking payload ...
+2025-05-17T17:12:39.5956740Z ##[warning]entry_point.py:256: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+
+2025-05-17T17:12:39.5976830Z entry_point.py:256: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+2025-05-17T17:12:40.2540130Z ##[warning]entry_point.py:256: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+
+2025-05-17T17:12:40.2542190Z entry_point.py:256: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+2025-05-17T17:12:43.0448840Z 
+2025-05-17T17:12:43.0449790Z Installing base environment...
+2025-05-17T17:12:43.0450310Z 
+2025-05-17T17:12:43.9492390Z Preparing transaction: ...working... done
+2025-05-17T17:12:50.6112310Z Executing transaction: ...working... 
+2025-05-17T17:12:50.6113260Z done
+2025-05-17T17:12:51.1906070Z ##[warning]entry_point.py:256: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+
+2025-05-17T17:12:51.1915120Z entry_point.py:256: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+2025-05-17T17:12:51.2968420Z installation finished.
+2025-05-17T17:12:51.2982440Z ##[endgroup]
+2025-05-17T17:12:51.2982970Z ##[group]Setup environment variables...
+2025-05-17T17:12:51.2983290Z Add "/Users/runner/miniconda3/condabin" to PATH
+2025-05-17T17:12:51.2985080Z Set 'CONDA="/Users/runner/miniconda3"'
+2025-05-17T17:12:51.2986680Z ##[endgroup]
+2025-05-17T17:12:51.2987040Z ##[group]Parsing environment...
+2025-05-17T17:12:51.2988000Z ##[endgroup]
+2025-05-17T17:12:51.2988400Z ##[group]Applying initial configuration...
+2025-05-17T17:12:51.2989780Z Adding channel 'conda-forge'
+2025-05-17T17:12:51.2997880Z [command]/Users/runner/miniconda3/condabin/conda config --add channels conda-forge
+2025-05-17T17:12:51.6243510Z ##[warning]/Users/runner/miniconda3/lib/python3.13/site-packages/conda/base/context.py:198: FutureWarning: Adding 'defaults' to channel list implicitly is deprecated and will be removed in 25.9. 
+
+To remove this warning, please choose a default channel explicitly with conda's regular configuration system, e.g. by adding 'defaults' to the list of channels:
+
+  conda config --add channels defaults
+
+For more information see https://docs.conda.io/projects/conda/en/stable/user-guide/configuration/use-condarc.html
+
+  deprecated.topic(
+
+2025-05-17T17:12:51.6253050Z /Users/runner/miniconda3/lib/python3.13/site-packages/conda/base/context.py:198: FutureWarning: Adding 'defaults' to channel list implicitly is deprecated and will be removed in 25.9. 
+2025-05-17T17:12:51.6256150Z 
+2025-05-17T17:12:51.6256710Z To remove this warning, please choose a default channel explicitly with conda's regular configuration system, e.g. by adding 'defaults' to the list of channels:
+2025-05-17T17:12:51.6257390Z 
+2025-05-17T17:12:51.6257600Z   conda config --add channels defaults
+2025-05-17T17:12:51.6258010Z 
+2025-05-17T17:12:51.6258530Z For more information see https://docs.conda.io/projects/conda/en/stable/user-guide/configuration/use-condarc.html
+2025-05-17T17:12:51.6259020Z 
+2025-05-17T17:12:51.6259290Z   deprecated.topic(
+2025-05-17T17:12:51.6599280Z ##[warning]The 'defaults' channel might have been added implicitly. If this is intentional, add 'defaults' to the 'channels' list. Otherwise, consider setting 'conda-remove-defaults' to 'true'.
+2025-05-17T17:12:51.6601410Z Adding pkgs_dir '/Users/runner/conda_pkgs_dir'
+2025-05-17T17:12:51.6606160Z [command]/Users/runner/miniconda3/condabin/conda config --add pkgs_dirs /Users/runner/conda_pkgs_dir
+2025-05-17T17:12:52.0044170Z auto_activate_base: true
+2025-05-17T17:12:52.0048430Z [command]/Users/runner/miniconda3/condabin/conda config --set auto_activate_base true
+2025-05-17T17:12:52.3053940Z auto_update_conda: false
+2025-05-17T17:12:52.3058950Z [command]/Users/runner/miniconda3/condabin/conda config --set auto_update_conda false
+2025-05-17T17:12:52.6760920Z solver: libmamba
+2025-05-17T17:12:52.6765870Z [command]/Users/runner/miniconda3/condabin/conda config --set solver libmamba
+2025-05-17T17:12:52.9894270Z always_yes: true
+2025-05-17T17:12:52.9903380Z [command]/Users/runner/miniconda3/condabin/conda config --set always_yes true
+2025-05-17T17:12:53.3363740Z changeps1: false
+2025-05-17T17:12:53.3367910Z [command]/Users/runner/miniconda3/condabin/conda config --set changeps1 false
+2025-05-17T17:12:53.6646680Z [command]/Users/runner/miniconda3/condabin/conda config --show-sources
+2025-05-17T17:12:53.9345820Z ==> /Users/runner/miniconda3/.condarc <==
+2025-05-17T17:12:53.9346190Z channels:
+2025-05-17T17:12:53.9346490Z   - defaults
+2025-05-17T17:12:53.9346930Z 
+2025-05-17T17:12:53.9347140Z ==> /Users/runner/.condarc <==
+2025-05-17T17:12:53.9347470Z auto_update_conda: False
+2025-05-17T17:12:53.9347800Z auto_activate_base: True
+2025-05-17T17:12:53.9348140Z notify_outdated_conda: False
+2025-05-17T17:12:53.9348510Z changeps1: False
+2025-05-17T17:12:53.9348850Z pkgs_dirs:
+2025-05-17T17:12:53.9349160Z   - /Users/runner/conda_pkgs_dir
+2025-05-17T17:12:53.9349540Z channels:
+2025-05-17T17:12:53.9349850Z   - conda-forge
+2025-05-17T17:12:53.9355930Z   - defaults
+2025-05-17T17:12:53.9356210Z always_yes: True
+2025-05-17T17:12:53.9356610Z solver: libmamba
+2025-05-17T17:12:53.9356780Z 
+2025-05-17T17:12:53.9770980Z [command]/Users/runner/miniconda3/condabin/conda config --show
+2025-05-17T17:12:54.3446890Z add_anaconda_token: True
+2025-05-17T17:12:54.3547940Z add_pip_as_python_dependency: True
+2025-05-17T17:12:54.3649630Z aggressive_update_packages:
+2025-05-17T17:12:54.3750570Z   - ca-certificates
+2025-05-17T17:12:54.3848280Z   - certifi
+2025-05-17T17:12:54.3848620Z   - openssl
+2025-05-17T17:12:54.3849030Z allow_conda_downgrades: False
+2025-05-17T17:12:54.3849400Z allow_cycles: True
+2025-05-17T17:12:54.3849660Z allow_non_channel_urls: False
+2025-05-17T17:12:54.3849930Z allow_softlinks: False
+2025-05-17T17:12:54.3850190Z allowlist_channels: []
+2025-05-17T17:12:54.3850600Z always_copy: False
+2025-05-17T17:12:54.3850810Z always_softlink: False
+2025-05-17T17:12:54.3852060Z always_yes: True
+2025-05-17T17:12:54.3922440Z anaconda_anon_usage: True
+2025-05-17T17:12:54.3922940Z anaconda_heartbeat: False
+2025-05-17T17:12:54.3923260Z anaconda_upload: None
+2025-05-17T17:12:54.3923580Z auto_activate_base: True
+2025-05-17T17:12:54.3923990Z auto_stack: 0
+2025-05-17T17:12:54.3924300Z auto_update_conda: False
+2025-05-17T17:12:54.3924590Z bld_path: 
+2025-05-17T17:12:54.3924910Z changeps1: False
+2025-05-17T17:12:54.3925260Z channel_alias: https://conda.anaconda.org
+2025-05-17T17:12:54.3925720Z channel_priority: flexible
+2025-05-17T17:12:54.3926000Z channel_settings: []
+2025-05-17T17:12:54.3926290Z channels:
+2025-05-17T17:12:54.3926560Z   - conda-forge
+2025-05-17T17:12:54.3926870Z   - defaults
+2025-05-17T17:12:54.3927150Z client_ssl_cert: None
+2025-05-17T17:12:54.3927410Z client_ssl_cert_key: None
+2025-05-17T17:12:54.3927790Z clobber: False
+2025-05-17T17:12:54.3928090Z conda_build: {}
+2025-05-17T17:12:54.3928350Z console: classic
+2025-05-17T17:12:54.3928610Z create_default_packages: []
+2025-05-17T17:12:54.3928950Z croot: /Users/runner/miniconda3/conda-bld
+2025-05-17T17:12:54.3929250Z custom_channels:
+2025-05-17T17:12:54.3929540Z   pkgs/main: https://repo.anaconda.com
+2025-05-17T17:12:54.3929920Z   pkgs/r: https://repo.anaconda.com
+2025-05-17T17:12:54.3930300Z   pkgs/pro: https://repo.anaconda.com
+2025-05-17T17:12:54.3930600Z custom_multichannels:
+2025-05-17T17:12:54.3930920Z   defaults: 
+2025-05-17T17:12:54.3931240Z     - https://repo.anaconda.com/pkgs/main
+2025-05-17T17:12:54.3931580Z     - https://repo.anaconda.com/pkgs/r
+2025-05-17T17:12:54.3931900Z   local: 
+2025-05-17T17:12:54.3932200Z debug: False
+2025-05-17T17:12:54.3932440Z default_channels:
+2025-05-17T17:12:54.3932720Z   - https://repo.anaconda.com/pkgs/main
+2025-05-17T17:12:54.3933110Z   - https://repo.anaconda.com/pkgs/r
+2025-05-17T17:12:54.3933400Z default_python: 3.13
+2025-05-17T17:12:54.3933580Z default_threads: None
+2025-05-17T17:12:54.3933840Z denylist_channels: []
+2025-05-17T17:12:54.3934130Z deps_modifier: not_set
+2025-05-17T17:12:54.3934390Z dev: False
+2025-05-17T17:12:54.3934660Z disallowed_packages: []
+2025-05-17T17:12:54.3934970Z download_only: False
+2025-05-17T17:12:54.3935900Z dry_run: False
+2025-05-17T17:12:54.3936160Z enable_private_envs: False
+2025-05-17T17:12:54.3936470Z env_prompt: ({default_env}) 
+2025-05-17T17:12:54.3936840Z envs_dirs:
+2025-05-17T17:12:54.3937140Z   - /Users/runner/miniconda3/envs
+2025-05-17T17:12:54.3937430Z   - /Users/runner/.conda/envs
+2025-05-17T17:12:54.3937830Z envvars_force_uppercase: True
+2025-05-17T17:12:54.3938190Z error_upload_url: https://conda.io/conda-post/unexpected-error
+2025-05-17T17:12:54.3938610Z execute_threads: 1
+2025-05-17T17:12:54.3938850Z experimental: []
+2025-05-17T17:12:54.3939400Z extra_safety_checks: False
+2025-05-17T17:12:54.3939790Z fetch_threads: 5
+2025-05-17T17:12:54.3940050Z force: False
+2025-05-17T17:12:54.3940390Z force_32bit: False
+2025-05-17T17:12:54.3940810Z force_reinstall: False
+2025-05-17T17:12:54.3941130Z force_remove: False
+2025-05-17T17:12:54.3941440Z ignore_pinned: False
+2025-05-17T17:12:54.3941690Z json: False
+2025-05-17T17:12:54.3942010Z local_repodata_ttl: 1
+2025-05-17T17:12:54.3942320Z migrated_channel_aliases: []
+2025-05-17T17:12:54.3942650Z migrated_custom_channels: {}
+2025-05-17T17:12:54.3942940Z no_lock: False
+2025-05-17T17:12:54.3943200Z no_plugins: False
+2025-05-17T17:12:54.3943460Z non_admin_enabled: True
+2025-05-17T17:12:54.3945300Z notify_outdated_conda: False
+2025-05-17T17:12:54.3945860Z number_channel_notices: 5
+2025-05-17T17:12:54.3946450Z offline: False
+2025-05-17T17:12:54.3946650Z override_channels_enabled: True
+2025-05-17T17:12:54.3946950Z path_conflict: clobber
+2025-05-17T17:12:54.3947180Z pinned_packages: []
+2025-05-17T17:12:54.3947430Z pip_interop_enabled: False
+2025-05-17T17:12:54.3947640Z pkgs_dirs:
+2025-05-17T17:12:54.3947920Z   - /Users/runner/conda_pkgs_dir
+2025-05-17T17:12:54.3948160Z proxy_servers: {}
+2025-05-17T17:12:54.3948640Z quiet: False
+2025-05-17T17:12:54.3948830Z register_envs: True
+2025-05-17T17:12:54.3949130Z remote_backoff_factor: 1
+2025-05-17T17:12:54.3949360Z remote_connect_timeout_secs: 9.15
+2025-05-17T17:12:54.3949630Z remote_max_retries: 3
+2025-05-17T17:12:54.3949880Z remote_read_timeout_secs: 60.0
+2025-05-17T17:12:54.3950080Z repodata_fns:
+2025-05-17T17:12:54.3950290Z   - current_repodata.json
+2025-05-17T17:12:54.3950510Z   - repodata.json
+2025-05-17T17:12:54.3950750Z repodata_threads: None
+2025-05-17T17:12:54.3950930Z repodata_use_zst: True
+2025-05-17T17:12:54.3951120Z report_errors: None
+2025-05-17T17:12:54.3951250Z restore_free_channel: False
+2025-05-17T17:12:54.3951470Z rollback_enabled: True
+2025-05-17T17:12:54.3951680Z root_prefix: /Users/runner/miniconda3
+2025-05-17T17:12:54.3951900Z safety_checks: warn
+2025-05-17T17:12:54.3952100Z sat_solver: pycosat
+2025-05-17T17:12:54.3952320Z separate_format_cache: False
+2025-05-17T17:12:54.3952520Z shortcuts: True
+2025-05-17T17:12:54.3952680Z shortcuts_only: []
+2025-05-17T17:12:54.3952850Z show_channel_urls: None
+2025-05-17T17:12:54.3953030Z signing_metadata_url_base: None
+2025-05-17T17:12:54.3953230Z solver: libmamba
+2025-05-17T17:12:54.3953420Z solver_ignore_timestamps: False
+2025-05-17T17:12:54.3953610Z ssl_verify: True
+2025-05-17T17:12:54.3953790Z subdir: osx-arm64
+2025-05-17T17:12:54.3953970Z subdirs:
+2025-05-17T17:12:54.3954160Z   - osx-arm64
+2025-05-17T17:12:54.3954420Z   - noarch
+2025-05-17T17:12:54.3954590Z target_prefix_override: 
+2025-05-17T17:12:54.3954800Z trace: False
+2025-05-17T17:12:54.3954990Z track_features: []
+2025-05-17T17:12:54.3955190Z unsatisfiable_hints: True
+2025-05-17T17:12:54.3955420Z unsatisfiable_hints_check_depth: 2
+2025-05-17T17:12:54.3955600Z update_modifier: update_specs
+2025-05-17T17:12:54.3955850Z use_index_cache: False
+2025-05-17T17:12:54.3956020Z use_local: False
+2025-05-17T17:12:54.3956220Z use_only_tar_bz2: None
+2025-05-17T17:12:54.3956390Z verbosity: 0
+2025-05-17T17:12:54.3956540Z verify_threads: 1
+2025-05-17T17:12:54.3962880Z ##[endgroup]
+2025-05-17T17:12:54.3963470Z ##[group]Initializing conda shell integration...
+2025-05-17T17:12:54.3967230Z Removing "/Users/runner/.bashrc"
+2025-05-17T17:12:54.3985340Z Removing "/Users/runner/.bash_profile"
+2025-05-17T17:12:54.3993640Z [command]/Users/runner/miniconda3/condabin/conda init --all
+2025-05-17T17:12:55.4770760Z no change     /Users/runner/miniconda3/condabin/conda
+2025-05-17T17:12:55.4771560Z no change     /Users/runner/miniconda3/bin/conda
+2025-05-17T17:12:55.4771900Z no change     /Users/runner/miniconda3/bin/conda-env
+2025-05-17T17:12:55.4772230Z no change     /Users/runner/miniconda3/bin/activate
+2025-05-17T17:12:55.4772500Z no change     /Users/runner/miniconda3/bin/deactivate
+2025-05-17T17:12:55.4772860Z no change     /Users/runner/miniconda3/etc/profile.d/conda.sh
+2025-05-17T17:12:55.4773230Z no change     /Users/runner/miniconda3/etc/fish/conf.d/conda.fish
+2025-05-17T17:12:55.4773600Z no change     /Users/runner/miniconda3/shell/condabin/Conda.psm1
+2025-05-17T17:12:55.4773970Z no change     /Users/runner/miniconda3/shell/condabin/conda-hook.ps1
+2025-05-17T17:12:55.4774390Z no change     /Users/runner/miniconda3/lib/python3.13/site-packages/xontrib/conda.xsh
+2025-05-17T17:12:55.4774770Z no change     /Users/runner/miniconda3/etc/profile.d/conda.csh
+2025-05-17T17:12:55.4775040Z modified      /Users/runner/.bash_profile
+2025-05-17T17:12:55.4775410Z modified      /Users/runner/.zshrc
+2025-05-17T17:12:55.4775720Z modified      /Users/runner/.config/fish/config.fish
+2025-05-17T17:12:55.4775970Z modified      /Users/runner/.xonshrc
+2025-05-17T17:12:55.4776560Z modified      /Users/runner/.tcshrc
+2025-05-17T17:12:55.4776820Z modified      /Users/runner/.config/powershell/profile.ps1
+2025-05-17T17:12:55.4777100Z 
+2025-05-17T17:12:55.4777240Z ==> For changes to take effect, close and re-open your current shell. <==
+2025-05-17T17:12:55.4777530Z 
+2025-05-17T17:12:55.5146260Z Renaming "/Users/runner/.bash_profile" to "/Users/runner/.profile"
+2025-05-17T17:12:55.5146670Z 
+2025-05-17T17:12:55.5151890Z Append to "/Users/runner/.profile":
+2025-05-17T17:12:55.5152230Z  
+2025-05-17T17:12:55.5152520Z   # ----------------------------------------------------------------------------
+2025-05-17T17:12:55.5152850Z   # Conda Setup Action: Basic configuration
+2025-05-17T17:12:55.5153110Z   set -eo pipefail
+2025-05-17T17:12:55.5153310Z   # Conda Setup Action: Custom activation
+2025-05-17T17:12:55.5153730Z   conda activate "compas_occt-dev"
+2025-05-17T17:12:55.5153970Z   # ---------------------------------------------------------------------------- 
+2025-05-17T17:12:55.5154260Z 
+2025-05-17T17:12:55.5154360Z Append to "/Users/runner/.zshrc":
+2025-05-17T17:12:55.5154620Z  
+2025-05-17T17:12:55.5154830Z   # ----------------------------------------------------------------------------
+2025-05-17T17:12:55.5155090Z   # Conda Setup Action: Basic configuration
+2025-05-17T17:12:55.5155290Z   set -eo pipefail
+2025-05-17T17:12:55.5155510Z   # Conda Setup Action: Custom activation
+2025-05-17T17:12:55.5155820Z   conda activate "compas_occt-dev"
+2025-05-17T17:12:55.5156080Z   # ---------------------------------------------------------------------------- 
+2025-05-17T17:12:55.5156330Z 
+2025-05-17T17:12:55.5156420Z Append to "/Users/runner/.config/fish/config.fish":
+2025-05-17T17:12:55.5156760Z  
+2025-05-17T17:12:55.5156920Z   # ----------------------------------------------------------------------------
+2025-05-17T17:12:55.5157190Z   # Conda Setup Action: Basic configuration
+2025-05-17T17:12:55.5157380Z   set -eo pipefail
+2025-05-17T17:12:55.5157550Z   # Conda Setup Action: Custom activation
+2025-05-17T17:12:55.5157780Z   conda activate "compas_occt-dev"
+2025-05-17T17:12:55.5158090Z   # ---------------------------------------------------------------------------- 
+2025-05-17T17:12:55.5158270Z 
+2025-05-17T17:12:55.5158370Z Append to "/Users/runner/.tcshrc":
+2025-05-17T17:12:55.5158560Z  
+2025-05-17T17:12:55.5158740Z   # ----------------------------------------------------------------------------
+2025-05-17T17:12:55.5159010Z   # Conda Setup Action: Basic configuration
+2025-05-17T17:12:55.5159200Z   set -eo pipefail
+2025-05-17T17:12:55.5159390Z   # Conda Setup Action: Custom activation
+2025-05-17T17:12:55.5159680Z   conda activate "compas_occt-dev"
+2025-05-17T17:12:55.5159930Z   # ---------------------------------------------------------------------------- 
+2025-05-17T17:12:55.5160420Z 
+2025-05-17T17:12:55.5160640Z Append to "/Users/runner/.xonshrc":
+2025-05-17T17:12:55.5160910Z  
+2025-05-17T17:12:55.5161130Z   # ----------------------------------------------------------------------------
+2025-05-17T17:12:55.5161480Z   # Conda Setup Action: Basic configuration
+2025-05-17T17:12:55.5162000Z   set -eo pipefail
+2025-05-17T17:12:55.5162300Z   # Conda Setup Action: Custom activation
+2025-05-17T17:12:55.5162570Z   conda activate "compas_occt-dev"
+2025-05-17T17:12:55.5162850Z   # ---------------------------------------------------------------------------- 
+2025-05-17T17:12:55.5184500Z 
+2025-05-17T17:12:55.5185000Z Append to "/Users/runner/.config/powershell/profile.ps1":
+2025-05-17T17:12:55.5185420Z  
+2025-05-17T17:12:55.5185690Z   # ----------------------------------------------------------------------------
+2025-05-17T17:12:55.5186070Z   # Conda Setup Action: Custom activation
+2025-05-17T17:12:55.5186350Z   conda activate "compas_occt-dev"
+2025-05-17T17:12:55.5186700Z   # ---------------------------------------------------------------------------- 
+2025-05-17T17:12:55.5186900Z 
+2025-05-17T17:12:55.5187020Z Append to "/Users/runner/miniconda3/etc/profile.d/conda.sh":
+2025-05-17T17:12:55.5187240Z  
+2025-05-17T17:12:55.5187700Z   # ----------------------------------------------------------------------------
+2025-05-17T17:12:55.5187930Z   # Conda Setup Action: Basic configuration
+2025-05-17T17:12:55.5188110Z   set -eo pipefail
+2025-05-17T17:12:55.5188260Z   # Conda Setup Action: Custom activation
+2025-05-17T17:12:55.5188450Z   conda activate "compas_occt-dev"
+2025-05-17T17:12:55.5188670Z   # ---------------------------------------------------------------------------- 
+2025-05-17T17:12:55.5188840Z 
+2025-05-17T17:12:55.5188960Z Append to "/Users/runner/miniconda3/etc/fish/conf.d/conda.fish":
+2025-05-17T17:12:55.5189180Z  
+2025-05-17T17:12:55.5189330Z   # ----------------------------------------------------------------------------
+2025-05-17T17:12:55.5189570Z   # Conda Setup Action: Basic configuration
+2025-05-17T17:12:55.5189750Z   set -eo pipefail
+2025-05-17T17:12:55.5189890Z   # Conda Setup Action: Custom activation
+2025-05-17T17:12:55.5190070Z   conda activate "compas_occt-dev"
+2025-05-17T17:12:55.5190290Z   # ---------------------------------------------------------------------------- 
+2025-05-17T17:12:55.5190460Z 
+2025-05-17T17:12:55.5190850Z ##[endgroup]
+2025-05-17T17:12:55.5191150Z ##[group]Adding tools to 'base' env...
+2025-05-17T17:12:55.5191370Z Do we need to update conda?
+2025-05-17T17:12:55.5191560Z Do we need to update mamba?
+2025-05-17T17:12:55.5191710Z Do we need to update python?
+2025-05-17T17:12:55.5191870Z Do we need to update conda-build?
+2025-05-17T17:12:55.5192040Z No tools were installed in 'base' env.
+2025-05-17T17:12:55.5192290Z No post-install actions were taken on 'base' env.
+2025-05-17T17:12:55.5192580Z ##[endgroup]
+2025-05-17T17:12:55.5192970Z ##[group]Ensuring environment...
+2025-05-17T17:12:55.5193160Z Can we conda create (from explicit)?
+2025-05-17T17:12:55.5193380Z Can we conda create (simple)?
+2025-05-17T17:12:55.5193590Z ... will conda create (simple).
+2025-05-17T17:12:55.5193760Z Adding spec: python=3.10
+2025-05-17T17:12:55.5194150Z ##[group]Updating 'compas_occt-dev' env from conda create (simple)...
+2025-05-17T17:12:55.5194580Z [command]/Users/runner/miniconda3/condabin/conda create --name compas_occt-dev python=3.10
+2025-05-17T17:12:56.5570680Z Channels:
+2025-05-17T17:12:56.5672290Z  - conda-forge
+2025-05-17T17:12:56.5718200Z  - defaults
+2025-05-17T17:12:56.5720760Z Platform: osx-arm64
+2025-05-17T17:13:02.3153620Z Collecting package metadata (repodata.json): - \ | / - \ | / - \ | done
+2025-05-17T17:13:02.4169610Z Solving environment: - done
+2025-05-17T17:13:02.4412550Z 
+2025-05-17T17:13:02.4412940Z ## Package Plan ##
+2025-05-17T17:13:02.4413210Z 
+2025-05-17T17:13:02.4413390Z   environment location: /Users/runner/miniconda3/envs/compas_occt-dev
+2025-05-17T17:13:02.4415450Z 
+2025-05-17T17:13:02.4415520Z   added / updated specs:
+2025-05-17T17:13:02.4415750Z     - python=3.10
+2025-05-17T17:13:02.4415840Z 
+2025-05-17T17:13:02.4415850Z 
+2025-05-17T17:13:02.4415920Z The following packages will be downloaded:
+2025-05-17T17:13:02.4416100Z 
+2025-05-17T17:13:02.4416180Z     package                    |            build
+2025-05-17T17:13:02.4416420Z     ---------------------------|-----------------
+2025-05-17T17:13:02.4416660Z     bzip2-1.0.8                |       h99b78c6_7         120 KB  conda-forge
+2025-05-17T17:13:02.4416970Z     ca-certificates-2025.4.26  |       hbd8a1cb_0         149 KB  conda-forge
+2025-05-17T17:13:02.4417330Z     libexpat-2.7.0             |       h286801f_0          64 KB  conda-forge
+2025-05-17T17:13:02.4417620Z     libffi-3.4.6               |       h1da3d7d_1          39 KB  conda-forge
+2025-05-17T17:13:02.4417920Z     liblzma-5.8.1              |       h39f12f2_1          90 KB  conda-forge
+2025-05-17T17:13:02.4418210Z     libsqlite-3.49.2           |       h3f77e49_0         878 KB  conda-forge
+2025-05-17T17:13:02.4418500Z     libzlib-1.3.1              |       h8359307_2          45 KB  conda-forge
+2025-05-17T17:13:02.4418810Z     ncurses-6.5                |       h5e97a16_3         778 KB  conda-forge
+2025-05-17T17:13:02.4419110Z     openssl-3.5.0              |       h81ee809_1         2.9 MB  conda-forge
+2025-05-17T17:13:02.4422490Z     pip-25.1.1                 |     pyh8b19718_0         1.2 MB  conda-forge
+2025-05-17T17:13:02.4422770Z     python-3.10.17             |h6cefb37_0_cpython        10.9 MB  conda-forge
+2025-05-17T17:13:02.4423050Z     readline-8.2               |       h1d1bf99_2         246 KB  conda-forge
+2025-05-17T17:13:02.4423350Z     setuptools-80.1.0          |     pyhff2d567_0         760 KB  conda-forge
+2025-05-17T17:13:02.4423650Z     tk-8.6.13                  |       h5083fa2_1         3.0 MB  conda-forge
+2025-05-17T17:13:02.4423910Z     tzdata-2025b               |       h78e105d_0         120 KB  conda-forge
+2025-05-17T17:13:02.4424200Z     wheel-0.45.1               |     pyhd8ed1ab_1          61 KB  conda-forge
+2025-05-17T17:13:02.4424520Z     ------------------------------------------------------------
+2025-05-17T17:13:02.4424770Z                                            Total:        21.3 MB
+2025-05-17T17:13:02.4424920Z 
+2025-05-17T17:13:02.4425000Z The following NEW packages will be INSTALLED:
+2025-05-17T17:13:02.4425160Z 
+2025-05-17T17:13:02.4430600Z   bzip2              conda-forge/osx-arm64::bzip2-1.0.8-h99b78c6_7 
+2025-05-17T17:13:02.4431060Z   ca-certificates    conda-forge/noarch::ca-certificates-2025.4.26-hbd8a1cb_0 
+2025-05-17T17:13:02.4431440Z   libexpat           conda-forge/osx-arm64::libexpat-2.7.0-h286801f_0 
+2025-05-17T17:13:02.4431810Z   libffi             conda-forge/osx-arm64::libffi-3.4.6-h1da3d7d_1 
+2025-05-17T17:13:02.4432100Z   liblzma            conda-forge/osx-arm64::liblzma-5.8.1-h39f12f2_1 
+2025-05-17T17:13:02.4432420Z   libsqlite          conda-forge/osx-arm64::libsqlite-3.49.2-h3f77e49_0 
+2025-05-17T17:13:02.4432740Z   libzlib            conda-forge/osx-arm64::libzlib-1.3.1-h8359307_2 
+2025-05-17T17:13:02.4433020Z   ncurses            conda-forge/osx-arm64::ncurses-6.5-h5e97a16_3 
+2025-05-17T17:13:02.4433300Z   openssl            conda-forge/osx-arm64::openssl-3.5.0-h81ee809_1 
+2025-05-17T17:13:02.4433570Z   pip                conda-forge/noarch::pip-25.1.1-pyh8b19718_0 
+2025-05-17T17:13:02.4433860Z   python             conda-forge/osx-arm64::python-3.10.17-h6cefb37_0_cpython 
+2025-05-17T17:13:02.4434160Z   readline           conda-forge/osx-arm64::readline-8.2-h1d1bf99_2 
+2025-05-17T17:13:02.4434460Z   setuptools         conda-forge/noarch::setuptools-80.1.0-pyhff2d567_0 
+2025-05-17T17:13:02.4434740Z   tk                 conda-forge/osx-arm64::tk-8.6.13-h5083fa2_1 
+2025-05-17T17:13:02.4434990Z   tzdata             conda-forge/noarch::tzdata-2025b-h78e105d_0 
+2025-05-17T17:13:02.4435260Z   wheel              conda-forge/noarch::wheel-0.45.1-pyhd8ed1ab_1 
+2025-05-17T17:13:02.4435430Z 
+2025-05-17T17:13:02.4435780Z 
+2025-05-17T17:13:02.4435790Z 
+2025-05-17T17:13:02.4435900Z Downloading and Extracting Packages: ...working...
+2025-05-17T17:13:02.4436280Z python-3.10.17       | 10.9 MB   |            |   0% 
+2025-05-17T17:13:02.4436440Z 
+2025-05-17T17:13:02.4439960Z tk-8.6.13            | 3.0 MB    |            |   0% [A
+2025-05-17T17:13:02.4440600Z 
+2025-05-17T17:13:02.4440850Z 
+2025-05-17T17:13:02.4468360Z openssl-3.5.0        | 2.9 MB    |            |   0% [A[A
+2025-05-17T17:13:02.4469250Z 
+2025-05-17T17:13:02.4469370Z 
+2025-05-17T17:13:02.4469530Z 
+2025-05-17T17:13:02.4469940Z pip-25.1.1           | 1.2 MB    |            |   0% [A[A[A
+2025-05-17T17:13:02.4470290Z 
+2025-05-17T17:13:02.4470400Z 
+2025-05-17T17:13:02.4470550Z 
+2025-05-17T17:13:02.4470660Z 
+2025-05-17T17:13:02.4518050Z libsqlite-3.49.2     | 878 KB    |            |   0% [A[A[A[A
+2025-05-17T17:13:02.4531220Z 
+2025-05-17T17:13:02.4531330Z 
+2025-05-17T17:13:02.4531380Z 
+2025-05-17T17:13:02.4531420Z 
+2025-05-17T17:13:02.4531500Z 
+2025-05-17T17:13:02.4531780Z ncurses-6.5          | 778 KB    |            |   0% [A[A[A[A[A
+2025-05-17T17:13:02.4532010Z 
+2025-05-17T17:13:02.4532050Z 
+2025-05-17T17:13:02.4532100Z 
+2025-05-17T17:13:02.4532150Z 
+2025-05-17T17:13:02.4532190Z 
+2025-05-17T17:13:02.4532240Z 
+2025-05-17T17:13:02.4533320Z setuptools-80.1.0    | 760 KB    |            |   0% [A[A[A[A[A[A
+2025-05-17T17:13:02.4533690Z 
+2025-05-17T17:13:02.4533740Z 
+2025-05-17T17:13:02.4533790Z 
+2025-05-17T17:13:02.4533830Z 
+2025-05-17T17:13:02.4533880Z 
+2025-05-17T17:13:02.4533930Z 
+2025-05-17T17:13:02.4533970Z 
+2025-05-17T17:13:02.4534220Z readline-8.2         | 246 KB    |            |   0% [A[A[A[A[A[A[A
+2025-05-17T17:13:02.4534850Z 
+2025-05-17T17:13:02.4534900Z 
+2025-05-17T17:13:02.4534950Z 
+2025-05-17T17:13:02.4534990Z 
+2025-05-17T17:13:02.4535330Z 
+2025-05-17T17:13:02.4535430Z 
+2025-05-17T17:13:02.4535480Z 
+2025-05-17T17:13:02.4535660Z 
+2025-05-17T17:13:02.4535980Z ca-certificates-2025 | 149 KB    |            |   0% [A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.4536250Z 
+2025-05-17T17:13:02.4536300Z 
+2025-05-17T17:13:02.4536340Z 
+2025-05-17T17:13:02.4536390Z 
+2025-05-17T17:13:02.4536440Z 
+2025-05-17T17:13:02.4536480Z 
+2025-05-17T17:13:02.4536530Z 
+2025-05-17T17:13:02.4536570Z 
+2025-05-17T17:13:02.4536620Z 
+2025-05-17T17:13:02.4536830Z tzdata-2025b         | 120 KB    |            |   0% [A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.4537170Z 
+2025-05-17T17:13:02.4537220Z 
+2025-05-17T17:13:02.4537260Z 
+2025-05-17T17:13:02.4537310Z 
+2025-05-17T17:13:02.4537360Z 
+2025-05-17T17:13:02.4537400Z 
+2025-05-17T17:13:02.4537450Z 
+2025-05-17T17:13:02.4537490Z 
+2025-05-17T17:13:02.4537540Z 
+2025-05-17T17:13:02.4537580Z 
+2025-05-17T17:13:02.4537780Z bzip2-1.0.8          | 120 KB    |            |   0% [A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.4538500Z 
+2025-05-17T17:13:02.4538560Z 
+2025-05-17T17:13:02.4538560Z 
+2025-05-17T17:13:02.4538570Z 
+2025-05-17T17:13:02.4538580Z 
+2025-05-17T17:13:02.4538600Z 
+2025-05-17T17:13:02.4538600Z 
+2025-05-17T17:13:02.4538610Z 
+2025-05-17T17:13:02.4538610Z 
+2025-05-17T17:13:02.4538610Z 
+2025-05-17T17:13:02.4538610Z 
+2025-05-17T17:13:02.4538790Z liblzma-5.8.1        | 90 KB     |            |   0% [A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.4538980Z 
+2025-05-17T17:13:02.4538980Z 
+2025-05-17T17:13:02.4538990Z 
+2025-05-17T17:13:02.4538990Z 
+2025-05-17T17:13:02.4538990Z 
+2025-05-17T17:13:02.4538990Z 
+2025-05-17T17:13:02.4539000Z 
+2025-05-17T17:13:02.4539000Z 
+2025-05-17T17:13:02.4539000Z 
+2025-05-17T17:13:02.4539000Z 
+2025-05-17T17:13:02.4539000Z 
+2025-05-17T17:13:02.4539010Z 
+2025-05-17T17:13:02.4539170Z libexpat-2.7.0       | 64 KB     |            |   0% [A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.4539350Z 
+2025-05-17T17:13:02.4539350Z 
+2025-05-17T17:13:02.4539360Z 
+2025-05-17T17:13:02.4539380Z 
+2025-05-17T17:13:02.4539380Z 
+2025-05-17T17:13:02.4539380Z 
+2025-05-17T17:13:02.4539380Z 
+2025-05-17T17:13:02.4539390Z 
+2025-05-17T17:13:02.4539390Z 
+2025-05-17T17:13:02.4539390Z 
+2025-05-17T17:13:02.4539650Z 
+2025-05-17T17:13:02.4539650Z 
+2025-05-17T17:13:02.4539650Z 
+2025-05-17T17:13:02.4539810Z wheel-0.45.1         | 61 KB     |            |   0% [A[A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.4539980Z 
+2025-05-17T17:13:02.4539980Z 
+2025-05-17T17:13:02.4539980Z 
+2025-05-17T17:13:02.4539990Z 
+2025-05-17T17:13:02.4539990Z 
+2025-05-17T17:13:02.4539990Z 
+2025-05-17T17:13:02.4539990Z 
+2025-05-17T17:13:02.4539990Z 
+2025-05-17T17:13:02.4540000Z 
+2025-05-17T17:13:02.4540000Z 
+2025-05-17T17:13:02.4540000Z 
+2025-05-17T17:13:02.4540000Z 
+2025-05-17T17:13:02.4540000Z 
+2025-05-17T17:13:02.4540010Z 
+2025-05-17T17:13:02.4540160Z libzlib-1.3.1        | 45 KB     |            |   0% [A[A[A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.4540340Z 
+2025-05-17T17:13:02.4540340Z 
+2025-05-17T17:13:02.4540340Z 
+2025-05-17T17:13:02.4540340Z 
+2025-05-17T17:13:02.4540350Z 
+2025-05-17T17:13:02.4540350Z 
+2025-05-17T17:13:02.4540350Z 
+2025-05-17T17:13:02.4540350Z 
+2025-05-17T17:13:02.4540350Z 
+2025-05-17T17:13:02.4540360Z 
+2025-05-17T17:13:02.4540360Z 
+2025-05-17T17:13:02.4540360Z 
+2025-05-17T17:13:02.4540370Z 
+2025-05-17T17:13:02.4540370Z 
+2025-05-17T17:13:02.4540370Z 
+2025-05-17T17:13:02.5447410Z libffi-3.4.6         | 39 KB     |            |   0% [A[A[A[A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.5448340Z 
+2025-05-17T17:13:02.5448390Z 
+2025-05-17T17:13:02.5474800Z openssl-3.5.0        | 2.9 MB    | 4          |   4% [A[A
+2025-05-17T17:13:02.5475130Z 
+2025-05-17T17:13:02.5526440Z tk-8.6.13            | 3.0 MB    | 4          |   4% [A
+2025-05-17T17:13:02.5572080Z python-3.10.17       | 10.9 MB   |            |   0% 
+2025-05-17T17:13:02.5576690Z 
+2025-05-17T17:13:02.5576760Z 
+2025-05-17T17:13:02.5576920Z 
+2025-05-17T17:13:02.5650180Z pip-25.1.1           | 1.2 MB    | #          |  11% [A[A[A
+2025-05-17T17:13:02.5654750Z 
+2025-05-17T17:13:02.5654850Z 
+2025-05-17T17:13:02.5654930Z 
+2025-05-17T17:13:02.5655010Z 
+2025-05-17T17:13:02.5973990Z libsqlite-3.49.2     | 878 KB    | 1          |   2% [A[A[A[A
+2025-05-17T17:13:02.6089930Z 
+2025-05-17T17:13:02.6191340Z 
+2025-05-17T17:13:02.6292060Z 
+2025-05-17T17:13:02.6394630Z pip-25.1.1           | 1.2 MB    | ########## | 100% [A[A[A
+2025-05-17T17:13:02.6496410Z 
+2025-05-17T17:13:02.6597670Z 
+2025-05-17T17:13:02.6705610Z openssl-3.5.0        | 2.9 MB    | ########## | 100% [A[A
+2025-05-17T17:13:02.6807200Z 
+2025-05-17T17:13:02.6925600Z 
+2025-05-17T17:13:02.7031310Z 
+2025-05-17T17:13:02.7184130Z 
+2025-05-17T17:13:02.7379910Z libsqlite-3.49.2     | 878 KB    | ########## | 100% [A[A[A[A
+2025-05-17T17:13:02.7481250Z 
+2025-05-17T17:13:02.7583580Z tk-8.6.13            | 3.0 MB    | ########## | 100% [A
+2025-05-17T17:13:02.7693360Z python-3.10.17       | 10.9 MB   | ##2        |  23% 
+2025-05-17T17:13:02.7795840Z 
+2025-05-17T17:13:02.7899490Z 
+2025-05-17T17:13:02.8024740Z 
+2025-05-17T17:13:02.8125300Z 
+2025-05-17T17:13:02.8226440Z libsqlite-3.49.2     | 878 KB    | ########## | 100% [A[A[A[A
+2025-05-17T17:13:02.8327520Z 
+2025-05-17T17:13:02.8428160Z 
+2025-05-17T17:13:02.8529230Z 
+2025-05-17T17:13:02.8629790Z 
+2025-05-17T17:13:02.8730540Z 
+2025-05-17T17:13:02.8833200Z 
+2025-05-17T17:13:02.8934870Z setuptools-80.1.0    | 760 KB    | 2          |   2% [A[A[A[A[A[A
+2025-05-17T17:13:02.9036630Z 
+2025-05-17T17:13:02.9044480Z 
+2025-05-17T17:13:02.9145740Z 
+2025-05-17T17:13:02.9239430Z 
+2025-05-17T17:13:02.9246010Z 
+2025-05-17T17:13:02.9346550Z 
+2025-05-17T17:13:02.9443770Z setuptools-80.1.0    | 760 KB    | ########## | 100% [A[A[A[A[A[A
+2025-05-17T17:13:02.9450560Z 
+2025-05-17T17:13:02.9478980Z 
+2025-05-17T17:13:02.9479600Z 
+2025-05-17T17:13:02.9481100Z 
+2025-05-17T17:13:02.9481150Z 
+2025-05-17T17:13:02.9481780Z ncurses-6.5          | 778 KB    | 2          |   2% [A[A[A[A[A
+2025-05-17T17:13:02.9486890Z 
+2025-05-17T17:13:02.9487330Z 
+2025-05-17T17:13:02.9487390Z 
+2025-05-17T17:13:02.9487440Z 
+2025-05-17T17:13:02.9487490Z 
+2025-05-17T17:13:02.9487540Z 
+2025-05-17T17:13:02.9487580Z 
+2025-05-17T17:13:02.9488030Z readline-8.2         | 246 KB    | 6          |   6% [A[A[A[A[A[A[A
+2025-05-17T17:13:02.9505590Z 
+2025-05-17T17:13:02.9506300Z 
+2025-05-17T17:13:02.9506370Z 
+2025-05-17T17:13:02.9506410Z 
+2025-05-17T17:13:02.9507330Z 
+2025-05-17T17:13:02.9508340Z 
+2025-05-17T17:13:02.9508520Z 
+2025-05-17T17:13:02.9509040Z readline-8.2         | 246 KB    | ########## | 100% [A[A[A[A[A[A[A
+2025-05-17T17:13:02.9533090Z 
+2025-05-17T17:13:02.9533190Z 
+2025-05-17T17:13:02.9533240Z 
+2025-05-17T17:13:02.9533290Z 
+2025-05-17T17:13:02.9533620Z 
+2025-05-17T17:13:02.9533960Z 
+2025-05-17T17:13:02.9534010Z 
+2025-05-17T17:13:02.9534050Z 
+2025-05-17T17:13:02.9534720Z ca-certificates-2025 | 149 KB    | #          |  11% [A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.9535970Z 
+2025-05-17T17:13:02.9536020Z 
+2025-05-17T17:13:02.9536070Z 
+2025-05-17T17:13:02.9536110Z 
+2025-05-17T17:13:02.9536160Z 
+2025-05-17T17:13:02.9536570Z ncurses-6.5          | 778 KB    | ########## | 100% [A[A[A[A[A
+2025-05-17T17:13:02.9541710Z 
+2025-05-17T17:13:02.9542290Z 
+2025-05-17T17:13:02.9544810Z 
+2025-05-17T17:13:02.9544870Z 
+2025-05-17T17:13:02.9545200Z 
+2025-05-17T17:13:02.9545560Z 
+2025-05-17T17:13:02.9546610Z 
+2025-05-17T17:13:02.9546660Z 
+2025-05-17T17:13:02.9547620Z ca-certificates-2025 | 149 KB    | ########## | 100% [A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.9548350Z 
+2025-05-17T17:13:02.9548400Z 
+2025-05-17T17:13:02.9548450Z 
+2025-05-17T17:13:02.9548490Z 
+2025-05-17T17:13:02.9548860Z 
+2025-05-17T17:13:02.9550040Z 
+2025-05-17T17:13:02.9550090Z 
+2025-05-17T17:13:02.9550130Z 
+2025-05-17T17:13:02.9550180Z 
+2025-05-17T17:13:02.9550550Z tzdata-2025b         | 120 KB    | #3         |  13% [A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.9552580Z 
+2025-05-17T17:13:02.9552630Z 
+2025-05-17T17:13:02.9552680Z 
+2025-05-17T17:13:02.9552720Z 
+2025-05-17T17:13:02.9552770Z 
+2025-05-17T17:13:02.9552810Z 
+2025-05-17T17:13:02.9553560Z 
+2025-05-17T17:13:02.9553680Z 
+2025-05-17T17:13:02.9553730Z 
+2025-05-17T17:13:02.9554120Z tzdata-2025b         | 120 KB    | ########## | 100% [A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.9555520Z python-3.10.17       | 10.9 MB   | #########7 |  97% 
+2025-05-17T17:13:02.9559780Z 
+2025-05-17T17:13:02.9560680Z 
+2025-05-17T17:13:02.9560730Z 
+2025-05-17T17:13:02.9560780Z 
+2025-05-17T17:13:02.9561010Z 
+2025-05-17T17:13:02.9562240Z 
+2025-05-17T17:13:02.9562300Z 
+2025-05-17T17:13:02.9562340Z 
+2025-05-17T17:13:02.9562390Z 
+2025-05-17T17:13:02.9562440Z 
+2025-05-17T17:13:02.9563390Z bzip2-1.0.8          | 120 KB    | #3         |  13% [A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.9564880Z 
+2025-05-17T17:13:02.9564930Z 
+2025-05-17T17:13:02.9564980Z 
+2025-05-17T17:13:02.9565020Z 
+2025-05-17T17:13:02.9565330Z 
+2025-05-17T17:13:02.9566630Z 
+2025-05-17T17:13:02.9567750Z 
+2025-05-17T17:13:02.9567800Z 
+2025-05-17T17:13:02.9567840Z 
+2025-05-17T17:13:02.9567900Z 
+2025-05-17T17:13:02.9568290Z 
+2025-05-17T17:13:02.9572450Z liblzma-5.8.1        | 90 KB     | #7         |  18% [A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.9572930Z 
+2025-05-17T17:13:02.9572990Z 
+2025-05-17T17:13:02.9573040Z 
+2025-05-17T17:13:02.9573180Z 
+2025-05-17T17:13:02.9576720Z 
+2025-05-17T17:13:02.9577040Z 
+2025-05-17T17:13:02.9582210Z 
+2025-05-17T17:13:02.9582840Z 
+2025-05-17T17:13:02.9583150Z 
+2025-05-17T17:13:02.9583320Z 
+2025-05-17T17:13:02.9583360Z 
+2025-05-17T17:13:02.9584180Z liblzma-5.8.1        | 90 KB     | ########## | 100% [A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.9584630Z 
+2025-05-17T17:13:02.9584670Z 
+2025-05-17T17:13:02.9584720Z 
+2025-05-17T17:13:02.9584770Z 
+2025-05-17T17:13:02.9584810Z 
+2025-05-17T17:13:02.9584860Z 
+2025-05-17T17:13:02.9586270Z 
+2025-05-17T17:13:02.9586460Z 
+2025-05-17T17:13:02.9586500Z 
+2025-05-17T17:13:02.9587590Z 
+2025-05-17T17:13:02.9587640Z 
+2025-05-17T17:13:02.9587690Z 
+2025-05-17T17:13:02.9588050Z libexpat-2.7.0       | 64 KB     | ##4        |  25% [A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.9689230Z 
+2025-05-17T17:13:02.9689270Z 
+2025-05-17T17:13:02.9689400Z 
+2025-05-17T17:13:02.9689400Z 
+2025-05-17T17:13:02.9689650Z 
+2025-05-17T17:13:02.9689650Z 
+2025-05-17T17:13:02.9689650Z 
+2025-05-17T17:13:02.9689650Z 
+2025-05-17T17:13:02.9689660Z 
+2025-05-17T17:13:02.9689660Z 
+2025-05-17T17:13:02.9690100Z bzip2-1.0.8          | 120 KB    | ########## | 100% [A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.9690390Z 
+2025-05-17T17:13:02.9690400Z 
+2025-05-17T17:13:02.9690400Z 
+2025-05-17T17:13:02.9690400Z 
+2025-05-17T17:13:02.9690410Z 
+2025-05-17T17:13:02.9690410Z 
+2025-05-17T17:13:02.9690410Z 
+2025-05-17T17:13:02.9690410Z 
+2025-05-17T17:13:02.9690410Z 
+2025-05-17T17:13:02.9690420Z 
+2025-05-17T17:13:02.9690460Z 
+2025-05-17T17:13:02.9791740Z 
+2025-05-17T17:13:02.9792230Z libexpat-2.7.0       | 64 KB     | ########## | 100% [A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.9792600Z 
+2025-05-17T17:13:02.9792600Z 
+2025-05-17T17:13:02.9792600Z 
+2025-05-17T17:13:02.9792610Z 
+2025-05-17T17:13:02.9792610Z 
+2025-05-17T17:13:02.9792610Z 
+2025-05-17T17:13:02.9792610Z 
+2025-05-17T17:13:02.9792610Z 
+2025-05-17T17:13:02.9792620Z 
+2025-05-17T17:13:02.9792650Z 
+2025-05-17T17:13:02.9792650Z 
+2025-05-17T17:13:02.9792650Z 
+2025-05-17T17:13:02.9792650Z 
+2025-05-17T17:13:02.9792860Z wheel-0.45.1         | 61 KB     | ##6        |  26% [A[A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.9793120Z 
+2025-05-17T17:13:02.9793120Z 
+2025-05-17T17:13:02.9793370Z 
+2025-05-17T17:13:02.9793370Z 
+2025-05-17T17:13:02.9793370Z 
+2025-05-17T17:13:02.9793370Z 
+2025-05-17T17:13:02.9793380Z 
+2025-05-17T17:13:02.9793380Z 
+2025-05-17T17:13:02.9793380Z 
+2025-05-17T17:13:02.9793380Z 
+2025-05-17T17:13:02.9793380Z 
+2025-05-17T17:13:02.9793390Z 
+2025-05-17T17:13:02.9793390Z 
+2025-05-17T17:13:02.9793620Z wheel-0.45.1         | 61 KB     | ########## | 100% [A[A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.9793950Z python-3.10.17       | 10.9 MB   | ########## | 100% 
+2025-05-17T17:13:02.9794180Z 
+2025-05-17T17:13:02.9794180Z 
+2025-05-17T17:13:02.9794180Z 
+2025-05-17T17:13:02.9794190Z 
+2025-05-17T17:13:02.9794190Z 
+2025-05-17T17:13:02.9794190Z 
+2025-05-17T17:13:02.9794200Z 
+2025-05-17T17:13:02.9794200Z 
+2025-05-17T17:13:02.9794200Z 
+2025-05-17T17:13:02.9794200Z 
+2025-05-17T17:13:02.9794200Z 
+2025-05-17T17:13:02.9794210Z 
+2025-05-17T17:13:02.9794210Z 
+2025-05-17T17:13:02.9794210Z 
+2025-05-17T17:13:02.9794380Z libzlib-1.3.1        | 45 KB     | ###5       |  35% [A[A[A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.9794630Z 
+2025-05-17T17:13:02.9794630Z 
+2025-05-17T17:13:02.9794640Z 
+2025-05-17T17:13:02.9794640Z 
+2025-05-17T17:13:02.9794640Z 
+2025-05-17T17:13:02.9794640Z 
+2025-05-17T17:13:02.9794640Z 
+2025-05-17T17:13:02.9794650Z 
+2025-05-17T17:13:02.9794650Z 
+2025-05-17T17:13:02.9794650Z 
+2025-05-17T17:13:02.9794650Z 
+2025-05-17T17:13:02.9794650Z 
+2025-05-17T17:13:02.9794660Z 
+2025-05-17T17:13:02.9794660Z 
+2025-05-17T17:13:02.9794880Z libzlib-1.3.1        | 45 KB     | ########## | 100% [A[A[A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:02.9795090Z 
+2025-05-17T17:13:02.9795090Z 
+2025-05-17T17:13:02.9795100Z 
+2025-05-17T17:13:02.9795220Z 
+2025-05-17T17:13:02.9896060Z 
+2025-05-17T17:13:02.9996770Z 
+2025-05-17T17:13:03.0065740Z 
+2025-05-17T17:13:03.0066670Z 
+2025-05-17T17:13:03.0209760Z 
+2025-05-17T17:13:03.0360740Z 
+2025-05-17T17:13:03.0462390Z 
+2025-05-17T17:13:03.0563430Z 
+2025-05-17T17:13:03.0664010Z 
+2025-05-17T17:13:03.0764710Z 
+2025-05-17T17:13:03.0865700Z 
+2025-05-17T17:13:03.0966750Z libffi-3.4.6         | 39 KB     | ####1      |  41% [A[A[A[A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:03.1073240Z 
+2025-05-17T17:13:03.1175180Z 
+2025-05-17T17:13:03.1275910Z 
+2025-05-17T17:13:03.1377100Z 
+2025-05-17T17:13:03.1477770Z 
+2025-05-17T17:13:03.1556220Z 
+2025-05-17T17:13:03.1617230Z 
+2025-05-17T17:13:03.1624010Z 
+2025-05-17T17:13:03.1629940Z 
+2025-05-17T17:13:03.1659750Z 
+2025-05-17T17:13:03.1678660Z 
+2025-05-17T17:13:03.1678760Z 
+2025-05-17T17:13:03.1678830Z 
+2025-05-17T17:13:03.1678870Z 
+2025-05-17T17:13:03.1679100Z 
+2025-05-17T17:13:03.1680200Z libffi-3.4.6         | 39 KB     | ########## | 100% [A[A[A[A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:03.1683770Z 
+2025-05-17T17:13:03.1684160Z 
+2025-05-17T17:13:03.1685100Z openssl-3.5.0        | 2.9 MB    | ########## | 100% [A[A
+2025-05-17T17:13:03.1686130Z 
+2025-05-17T17:13:03.1686190Z 
+2025-05-17T17:13:03.1686530Z openssl-3.5.0        | 2.9 MB    | ########## | 100% [A[A
+2025-05-17T17:13:03.1688470Z 
+2025-05-17T17:13:03.1689150Z 
+2025-05-17T17:13:03.1690740Z 
+2025-05-17T17:13:03.1690960Z pip-25.1.1           | 1.2 MB    | ########## | 100% [A[A[A
+2025-05-17T17:13:03.1691710Z 
+2025-05-17T17:13:03.1692490Z 
+2025-05-17T17:13:03.1692550Z 
+2025-05-17T17:13:03.1692800Z pip-25.1.1           | 1.2 MB    | ########## | 100% [A[A[A
+2025-05-17T17:13:03.1693200Z 
+2025-05-17T17:13:03.1693650Z 
+2025-05-17T17:13:03.1693780Z 
+2025-05-17T17:13:03.1693830Z 
+2025-05-17T17:13:03.1694650Z 
+2025-05-17T17:13:03.1694820Z 
+2025-05-17T17:13:03.1698870Z 
+2025-05-17T17:13:03.1699480Z readline-8.2         | 246 KB    | ########## | 100% [A[A[A[A[A[A[A
+2025-05-17T17:13:03.1699980Z 
+2025-05-17T17:13:03.1700040Z 
+2025-05-17T17:13:03.1700090Z 
+2025-05-17T17:13:03.1700140Z 
+2025-05-17T17:13:03.1700180Z 
+2025-05-17T17:13:03.1700500Z 
+2025-05-17T17:13:03.1700860Z 
+2025-05-17T17:13:03.1703700Z readline-8.2         | 246 KB    | ########## | 100% [A[A[A[A[A[A[A
+2025-05-17T17:13:03.1704930Z 
+2025-05-17T17:13:03.1706130Z tk-8.6.13            | 3.0 MB    | ########## | 100% [A
+2025-05-17T17:13:03.1706520Z 
+2025-05-17T17:13:03.1709020Z tk-8.6.13            | 3.0 MB    | ########## | 100% [A
+2025-05-17T17:13:03.1709520Z 
+2025-05-17T17:13:03.1710500Z 
+2025-05-17T17:13:03.1710550Z 
+2025-05-17T17:13:03.1710600Z 
+2025-05-17T17:13:03.1710640Z 
+2025-05-17T17:13:03.1710860Z 
+2025-05-17T17:13:03.1710900Z 
+2025-05-17T17:13:03.1710950Z 
+2025-05-17T17:13:03.1711240Z ca-certificates-2025 | 149 KB    | ########## | 100% [A[A[A[A[A[A[A[A
+2025-05-17T17:13:03.1712060Z 
+2025-05-17T17:13:03.1714340Z 
+2025-05-17T17:13:03.1714630Z 
+2025-05-17T17:13:03.1715440Z 
+2025-05-17T17:13:03.1715490Z 
+2025-05-17T17:13:03.1715550Z 
+2025-05-17T17:13:03.1715590Z 
+2025-05-17T17:13:03.1715640Z 
+2025-05-17T17:13:03.1716210Z ca-certificates-2025 | 149 KB    | ########## | 100% [A[A[A[A[A[A[A[A
+2025-05-17T17:13:03.1716850Z 
+2025-05-17T17:13:03.1717680Z 
+2025-05-17T17:13:03.1717730Z 
+2025-05-17T17:13:03.1717860Z 
+2025-05-17T17:13:03.1717920Z 
+2025-05-17T17:13:03.1721000Z 
+2025-05-17T17:13:03.1721890Z setuptools-80.1.0    | 760 KB    | ########## | 100% [A[A[A[A[A[A
+2025-05-17T17:13:03.1722440Z 
+2025-05-17T17:13:03.1722480Z 
+2025-05-17T17:13:03.1722600Z 
+2025-05-17T17:13:03.1722640Z 
+2025-05-17T17:13:03.1722690Z 
+2025-05-17T17:13:03.1722840Z 
+2025-05-17T17:13:03.1723870Z setuptools-80.1.0    | 760 KB    | ########## | 100% [A[A[A[A[A[A
+2025-05-17T17:13:03.1724470Z 
+2025-05-17T17:13:03.1724590Z 
+2025-05-17T17:13:03.1724630Z 
+2025-05-17T17:13:03.1724790Z 
+2025-05-17T17:13:03.1727100Z 
+2025-05-17T17:13:03.1727170Z 
+2025-05-17T17:13:03.1727470Z 
+2025-05-17T17:13:03.1727520Z 
+2025-05-17T17:13:03.1727570Z 
+2025-05-17T17:13:03.1727620Z 
+2025-05-17T17:13:03.1727680Z 
+2025-05-17T17:13:03.1727910Z liblzma-5.8.1        | 90 KB     | ########## | 100% [A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:03.1728980Z 
+2025-05-17T17:13:03.1729120Z 
+2025-05-17T17:13:03.1729170Z 
+2025-05-17T17:13:03.1729220Z 
+2025-05-17T17:13:03.1729260Z 
+2025-05-17T17:13:03.1729310Z 
+2025-05-17T17:13:03.1729650Z 
+2025-05-17T17:13:03.1729700Z 
+2025-05-17T17:13:03.1729740Z 
+2025-05-17T17:13:03.1729790Z 
+2025-05-17T17:13:03.1729830Z 
+2025-05-17T17:13:03.1903210Z liblzma-5.8.1        | 90 KB     | ########## | 100% [A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:03.1975740Z 
+2025-05-17T17:13:03.1976220Z 
+2025-05-17T17:13:03.1976300Z 
+2025-05-17T17:13:03.1976350Z 
+2025-05-17T17:13:03.1976510Z 
+2025-05-17T17:13:03.1977480Z 
+2025-05-17T17:13:03.1977920Z 
+2025-05-17T17:13:03.1977980Z 
+2025-05-17T17:13:03.1978030Z 
+2025-05-17T17:13:03.1978130Z 
+2025-05-17T17:13:03.1980120Z bzip2-1.0.8          | 120 KB    | ########## | 100% [A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:03.1981220Z 
+2025-05-17T17:13:03.1981280Z 
+2025-05-17T17:13:03.1981320Z 
+2025-05-17T17:13:03.1981580Z 
+2025-05-17T17:13:03.1981880Z 
+2025-05-17T17:13:03.1982580Z 
+2025-05-17T17:13:03.1982630Z 
+2025-05-17T17:13:03.1982680Z 
+2025-05-17T17:13:03.1983460Z 
+2025-05-17T17:13:03.1983520Z 
+2025-05-17T17:13:03.2032960Z bzip2-1.0.8          | 120 KB    | ########## | 100% [A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:03.2034100Z 
+2025-05-17T17:13:03.2034210Z 
+2025-05-17T17:13:03.2034300Z 
+2025-05-17T17:13:03.2035220Z 
+2025-05-17T17:13:03.2035420Z 
+2025-05-17T17:13:03.2035480Z 
+2025-05-17T17:13:03.2035530Z 
+2025-05-17T17:13:03.2035570Z 
+2025-05-17T17:13:03.2035620Z 
+2025-05-17T17:13:03.2035670Z 
+2025-05-17T17:13:03.2035710Z 
+2025-05-17T17:13:03.2036450Z 
+2025-05-17T17:13:03.2037030Z libexpat-2.7.0       | 64 KB     | ########## | 100% [A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:03.2039040Z 
+2025-05-17T17:13:03.2039820Z 
+2025-05-17T17:13:03.2040570Z 
+2025-05-17T17:13:03.2040630Z 
+2025-05-17T17:13:03.2040700Z 
+2025-05-17T17:13:03.2040760Z 
+2025-05-17T17:13:03.2040870Z 
+2025-05-17T17:13:03.2041250Z 
+2025-05-17T17:13:03.2041600Z 
+2025-05-17T17:13:03.2041720Z 
+2025-05-17T17:13:03.2041770Z 
+2025-05-17T17:13:03.2041810Z 
+2025-05-17T17:13:03.2357110Z libexpat-2.7.0       | 64 KB     | ########## | 100% [A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:03.2358820Z 
+2025-05-17T17:13:03.2358880Z 
+2025-05-17T17:13:03.2359000Z 
+2025-05-17T17:13:03.2359220Z 
+2025-05-17T17:13:03.2359280Z 
+2025-05-17T17:13:03.2359330Z 
+2025-05-17T17:13:03.2359380Z 
+2025-05-17T17:13:03.2359420Z 
+2025-05-17T17:13:03.2359620Z 
+2025-05-17T17:13:03.2359670Z 
+2025-05-17T17:13:03.2359790Z 
+2025-05-17T17:13:03.2361360Z 
+2025-05-17T17:13:03.2361600Z 
+2025-05-17T17:13:03.2361850Z wheel-0.45.1         | 61 KB     | ########## | 100% [A[A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:03.2362630Z 
+2025-05-17T17:13:03.2362680Z 
+2025-05-17T17:13:03.2362740Z 
+2025-05-17T17:13:03.2362780Z 
+2025-05-17T17:13:03.2362830Z 
+2025-05-17T17:13:03.2363000Z 
+2025-05-17T17:13:03.2363380Z 
+2025-05-17T17:13:03.2363770Z 
+2025-05-17T17:13:03.2363820Z 
+2025-05-17T17:13:03.2363870Z 
+2025-05-17T17:13:03.2363910Z 
+2025-05-17T17:13:03.2363960Z 
+2025-05-17T17:13:03.2364110Z 
+2025-05-17T17:13:03.3758560Z wheel-0.45.1         | 61 KB     | ########## | 100% [A[A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:03.3789940Z 
+2025-05-17T17:13:03.3791140Z 
+2025-05-17T17:13:03.3792070Z 
+2025-05-17T17:13:03.3792320Z 
+2025-05-17T17:13:03.3792370Z 
+2025-05-17T17:13:03.3792670Z 
+2025-05-17T17:13:03.3792780Z 
+2025-05-17T17:13:03.3792830Z 
+2025-05-17T17:13:03.3792870Z 
+2025-05-17T17:13:03.3793330Z tzdata-2025b         | 120 KB    | ########## | 100% [A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:03.3795660Z 
+2025-05-17T17:13:03.3797040Z 
+2025-05-17T17:13:03.3797770Z 
+2025-05-17T17:13:03.3798100Z 
+2025-05-17T17:13:03.3801400Z 
+2025-05-17T17:13:03.3801730Z 
+2025-05-17T17:13:03.3802530Z 
+2025-05-17T17:13:03.3802580Z 
+2025-05-17T17:13:03.3802630Z 
+2025-05-17T17:13:03.3860470Z tzdata-2025b         | 120 KB    | ########## | 100% [A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:03.3861350Z 
+2025-05-17T17:13:03.3861730Z 
+2025-05-17T17:13:03.3861800Z 
+2025-05-17T17:13:03.3861840Z 
+2025-05-17T17:13:03.3861890Z 
+2025-05-17T17:13:03.3861930Z 
+2025-05-17T17:13:03.3861980Z 
+2025-05-17T17:13:03.3862450Z 
+2025-05-17T17:13:03.3862610Z 
+2025-05-17T17:13:03.3862660Z 
+2025-05-17T17:13:03.3862710Z 
+2025-05-17T17:13:03.3862770Z 
+2025-05-17T17:13:03.3862810Z 
+2025-05-17T17:13:03.3862860Z 
+2025-05-17T17:13:03.3863200Z libzlib-1.3.1        | 45 KB     | ########## | 100% [A[A[A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:03.3863850Z 
+2025-05-17T17:13:03.3863910Z 
+2025-05-17T17:13:03.3863950Z 
+2025-05-17T17:13:03.3864000Z 
+2025-05-17T17:13:03.3864050Z 
+2025-05-17T17:13:03.3864300Z 
+2025-05-17T17:13:03.3864350Z 
+2025-05-17T17:13:03.3864570Z 
+2025-05-17T17:13:03.3864620Z 
+2025-05-17T17:13:03.3865130Z 
+2025-05-17T17:13:03.3865910Z 
+2025-05-17T17:13:03.3865960Z 
+2025-05-17T17:13:03.3866000Z 
+2025-05-17T17:13:03.3870600Z 
+2025-05-17T17:13:03.4023230Z libzlib-1.3.1        | 45 KB     | ########## | 100% [A[A[A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:03.4024680Z 
+2025-05-17T17:13:03.4024760Z 
+2025-05-17T17:13:03.4024940Z 
+2025-05-17T17:13:03.4025000Z 
+2025-05-17T17:13:03.4025240Z 
+2025-05-17T17:13:03.4025440Z 
+2025-05-17T17:13:03.4025490Z 
+2025-05-17T17:13:03.4025540Z 
+2025-05-17T17:13:03.4025590Z 
+2025-05-17T17:13:03.4025630Z 
+2025-05-17T17:13:03.4025680Z 
+2025-05-17T17:13:03.4025720Z 
+2025-05-17T17:13:03.4025940Z 
+2025-05-17T17:13:03.4026180Z 
+2025-05-17T17:13:03.4029220Z 
+2025-05-17T17:13:03.4029790Z libffi-3.4.6         | 39 KB     | ########## | 100% [A[A[A[A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:03.4030640Z 
+2025-05-17T17:13:03.4031020Z 
+2025-05-17T17:13:03.4031070Z 
+2025-05-17T17:13:03.4031120Z 
+2025-05-17T17:13:03.4031290Z 
+2025-05-17T17:13:03.4031600Z 
+2025-05-17T17:13:03.4032070Z 
+2025-05-17T17:13:03.4032130Z 
+2025-05-17T17:13:03.4032180Z 
+2025-05-17T17:13:03.4032370Z 
+2025-05-17T17:13:03.4032430Z 
+2025-05-17T17:13:03.4032480Z 
+2025-05-17T17:13:03.4032520Z 
+2025-05-17T17:13:03.4032570Z 
+2025-05-17T17:13:03.4032610Z 
+2025-05-17T17:13:03.8365540Z libffi-3.4.6         | 39 KB     | ########## | 100% [A[A[A[A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:03.8388500Z 
+2025-05-17T17:13:03.8388900Z 
+2025-05-17T17:13:03.8389120Z 
+2025-05-17T17:13:03.8389170Z 
+2025-05-17T17:13:03.8389250Z 
+2025-05-17T17:13:03.8389570Z ncurses-6.5          | 778 KB    | ########## | 100% [A[A[A[A[A
+2025-05-17T17:13:03.8389810Z 
+2025-05-17T17:13:03.8389860Z 
+2025-05-17T17:13:03.8389910Z 
+2025-05-17T17:13:03.8389950Z 
+2025-05-17T17:13:03.8390000Z 
+2025-05-17T17:13:04.0084400Z ncurses-6.5          | 778 KB    | ########## | 100% [A[A[A[A[A
+2025-05-17T17:13:04.0093100Z python-3.10.17       | 10.9 MB   | ########## | 100% 
+2025-05-17T17:13:04.0098990Z                                                      
+2025-05-17T17:13:04.0099340Z 
+2025-05-17T17:13:04.0099570Z                                                      [A
+2025-05-17T17:13:04.0099940Z 
+2025-05-17T17:13:04.0099980Z 
+2025-05-17T17:13:04.0100210Z                                                      [A[A
+2025-05-17T17:13:04.0100400Z 
+2025-05-17T17:13:04.0100450Z 
+2025-05-17T17:13:04.0100560Z 
+2025-05-17T17:13:04.0100720Z                                                      [A[A[A
+2025-05-17T17:13:04.0100990Z 
+2025-05-17T17:13:04.0101030Z 
+2025-05-17T17:13:04.0101080Z 
+2025-05-17T17:13:04.0101120Z 
+2025-05-17T17:13:04.0101350Z                                                      [A[A[A[A
+2025-05-17T17:13:04.0101540Z 
+2025-05-17T17:13:04.0101580Z 
+2025-05-17T17:13:04.0101630Z 
+2025-05-17T17:13:04.0101670Z 
+2025-05-17T17:13:04.0101720Z 
+2025-05-17T17:13:04.0102000Z                                                      [A[A[A[A[A
+2025-05-17T17:13:04.0102190Z 
+2025-05-17T17:13:04.0102230Z 
+2025-05-17T17:13:04.0102280Z 
+2025-05-17T17:13:04.0102320Z 
+2025-05-17T17:13:04.0102370Z 
+2025-05-17T17:13:04.0102490Z 
+2025-05-17T17:13:04.0102660Z                                                      [A[A[A[A[A[A
+2025-05-17T17:13:04.0102910Z 
+2025-05-17T17:13:04.0102960Z 
+2025-05-17T17:13:04.0103000Z 
+2025-05-17T17:13:04.0103050Z 
+2025-05-17T17:13:04.0103090Z 
+2025-05-17T17:13:04.0103140Z 
+2025-05-17T17:13:04.0103180Z 
+2025-05-17T17:13:04.0103400Z                                                      [A[A[A[A[A[A[A
+2025-05-17T17:13:04.0103600Z 
+2025-05-17T17:13:04.0103650Z 
+2025-05-17T17:13:04.0103760Z 
+2025-05-17T17:13:04.0103810Z 
+2025-05-17T17:13:04.0103850Z 
+2025-05-17T17:13:04.0103900Z 
+2025-05-17T17:13:04.0103940Z 
+2025-05-17T17:13:04.0103990Z 
+2025-05-17T17:13:04.0104290Z                                                      [A[A[A[A[A[A[A[A
+2025-05-17T17:13:04.0104560Z 
+2025-05-17T17:13:04.0104610Z 
+2025-05-17T17:13:04.0104650Z 
+2025-05-17T17:13:04.0104700Z 
+2025-05-17T17:13:04.0104740Z 
+2025-05-17T17:13:04.0104790Z 
+2025-05-17T17:13:04.0104830Z 
+2025-05-17T17:13:04.0104880Z 
+2025-05-17T17:13:04.0104920Z 
+2025-05-17T17:13:04.0105590Z                                                      [A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:04.0105780Z 
+2025-05-17T17:13:04.0105830Z 
+2025-05-17T17:13:04.0105870Z 
+2025-05-17T17:13:04.0105920Z 
+2025-05-17T17:13:04.0105960Z 
+2025-05-17T17:13:04.0106010Z 
+2025-05-17T17:13:04.0106050Z 
+2025-05-17T17:13:04.0106180Z 
+2025-05-17T17:13:04.0106220Z 
+2025-05-17T17:13:04.0106270Z 
+2025-05-17T17:13:04.0106430Z                                                      [A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:04.0106680Z 
+2025-05-17T17:13:04.0106730Z 
+2025-05-17T17:13:04.0106770Z 
+2025-05-17T17:13:04.0106820Z 
+2025-05-17T17:13:04.0106860Z 
+2025-05-17T17:13:04.0106910Z 
+2025-05-17T17:13:04.0106950Z 
+2025-05-17T17:13:04.0107000Z 
+2025-05-17T17:13:04.0107040Z 
+2025-05-17T17:13:04.0107090Z 
+2025-05-17T17:13:04.0107130Z 
+2025-05-17T17:13:04.0107300Z                                                      [A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:04.0107490Z 
+2025-05-17T17:13:04.0107540Z 
+2025-05-17T17:13:04.0107590Z 
+2025-05-17T17:13:04.0107630Z 
+2025-05-17T17:13:04.0107680Z 
+2025-05-17T17:13:04.0107720Z 
+2025-05-17T17:13:04.0107770Z 
+2025-05-17T17:13:04.0107810Z 
+2025-05-17T17:13:04.0107850Z 
+2025-05-17T17:13:04.0107900Z 
+2025-05-17T17:13:04.0107950Z 
+2025-05-17T17:13:04.0107990Z 
+2025-05-17T17:13:04.0108400Z                                                      [A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:04.0108600Z 
+2025-05-17T17:13:04.0108650Z 
+2025-05-17T17:13:04.0108690Z 
+2025-05-17T17:13:04.0108740Z 
+2025-05-17T17:13:04.0108780Z 
+2025-05-17T17:13:04.0108830Z 
+2025-05-17T17:13:04.0108870Z 
+2025-05-17T17:13:04.0108920Z 
+2025-05-17T17:13:04.0108960Z 
+2025-05-17T17:13:04.0109010Z 
+2025-05-17T17:13:04.0109050Z 
+2025-05-17T17:13:04.0109100Z 
+2025-05-17T17:13:04.0109140Z 
+2025-05-17T17:13:04.0109420Z                                                      [A[A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:04.0109660Z 
+2025-05-17T17:13:04.0109700Z 
+2025-05-17T17:13:04.0109750Z 
+2025-05-17T17:13:04.0109790Z 
+2025-05-17T17:13:04.0109840Z 
+2025-05-17T17:13:04.0109880Z 
+2025-05-17T17:13:04.0110000Z 
+2025-05-17T17:13:04.0110050Z 
+2025-05-17T17:13:04.0110090Z 
+2025-05-17T17:13:04.0110140Z 
+2025-05-17T17:13:04.0110180Z 
+2025-05-17T17:13:04.0110220Z 
+2025-05-17T17:13:04.0110270Z 
+2025-05-17T17:13:04.0110310Z 
+2025-05-17T17:13:04.0110500Z                                                      [A[A[A[A[A[A[A[A[A[A[A[A[A[A
+2025-05-17T17:13:04.0110770Z 
+2025-05-17T17:13:04.0110810Z 
+2025-05-17T17:13:04.0110850Z 
+2025-05-17T17:13:04.0110900Z 
+2025-05-17T17:13:04.0110940Z 
+2025-05-17T17:13:04.0110990Z 
+2025-05-17T17:13:04.0111030Z 
+2025-05-17T17:13:04.0111080Z 
+2025-05-17T17:13:04.0111120Z 
+2025-05-17T17:13:04.0111240Z 
+2025-05-17T17:13:04.0111280Z 
+2025-05-17T17:13:04.0111320Z 
+2025-05-17T17:13:04.0111370Z 
+2025-05-17T17:13:04.0111420Z 
+2025-05-17T17:13:04.0111460Z 
+2025-05-17T17:13:04.0111780Z                                                      [A[A[A[A[A[A[A[A[A[A[A[A[A[A[A done
+2025-05-17T17:13:04.1441410Z Preparing transaction: | done
+2025-05-17T17:13:06.6074040Z Verifying transaction: - \ | / - \ | / - \ | / - done
+2025-05-17T17:13:09.9240940Z Executing transaction: | / - \ | / - \ | / - \ | / - \ | / done
+2025-05-17T17:13:09.9538490Z #
+2025-05-17T17:13:09.9539090Z # To activate this environment, use
+2025-05-17T17:13:09.9539490Z #
+2025-05-17T17:13:09.9539850Z #     $ conda activate compas_occt-dev
+2025-05-17T17:13:09.9540240Z #
+2025-05-17T17:13:09.9540560Z # To deactivate an active environment, use
+2025-05-17T17:13:09.9541000Z #
+2025-05-17T17:13:09.9541340Z #     $ conda deactivate
+2025-05-17T17:13:09.9541670Z 
+2025-05-17T17:13:10.0245210Z ##[endgroup]
+2025-05-17T17:13:10.0246150Z ##[endgroup]
+2025-05-17T17:13:10.0246560Z setup-miniconda ran successfully

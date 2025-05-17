@@ -1,0 +1,9 @@
+﻿2025-05-17T17:13:10.0354550Z ##[group]Run conda config --add channels defaults
+2025-05-17T17:13:10.0354830Z [36;1mconda config --add channels defaults[0m
+2025-05-17T17:13:10.0355360Z [36;1mconda config --set channel_priority strict[0m
+2025-05-17T17:13:10.0428490Z shell: /bin/bash -el {0}
+2025-05-17T17:13:10.0428690Z env:
+2025-05-17T17:13:10.0428850Z   INPUT_RUN_POST: true
+2025-05-17T17:13:10.0429080Z   CONDA: /Users/runner/miniconda3
+2025-05-17T17:13:10.0429300Z ##[endgroup]
+2025-05-17T17:13:11.3763750Z Warning: 'defaults' already in 'channels' list, moving to the top

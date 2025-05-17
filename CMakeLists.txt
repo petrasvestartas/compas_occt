@@ -44,6 +44,10 @@ endif()
 # Create a custom target for OCCT build to make dependencies clearer
 add_custom_target(occt_libs)
 
+# Create a file to track the OCCT build status
+set(OCCT_MARKER_FILE "${CMAKE_BINARY_DIR}/occt_built_marker.txt")
+
+# Add the OCCT external project with improved tracking
 ExternalProject_Add(
     occt_download
     URL https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V7_9_0.zip
@@ -62,16 +66,29 @@ ExternalProject_Add(
       -DINSTALL_SAMPLES=OFF
       -DBUILD_USE_PCH=OFF
       -DBUILD_OPT_PROFILE=Production
+      -DBUILD_MODULE_Draw=OFF
     LOG_DOWNLOAD ON
     LOG_CONFIGURE ON
     LOG_BUILD ON
     LOG_INSTALL ON
     DOWNLOAD_NO_PROGRESS ON
     BUILD_COMMAND ${CMAKE_COMMAND} --build . --config Release -j 2
+    # Run a command after the build to create a marker file
+    COMMAND ${CMAKE_COMMAND} -E touch ${OCCT_MARKER_FILE}
 )
 
 # Set up the dependency chain
 add_dependencies(occt_libs occt_download)
+
+# Create a custom command that checks for the marker file
+add_custom_command(
+    OUTPUT ${OCCT_MARKER_FILE}
+    COMMAND ${CMAKE_COMMAND} -E echo "Waiting for OCCT build to complete..."
+    DEPENDS occt_download
+)
+
+# Add the marker file as a dependency of the custom target
+add_custom_target(ensure_occt_built ALL DEPENDS ${OCCT_MARKER_FILE})
 add_dependencies(external_downloads occt_download)
 
 # Find Python and nanobind
@@ -169,31 +186,60 @@ function(add_nanobind_extension name source)
   # Hard-coded platform-specific library path based on what we know about OCCT
   if(APPLE)
     set(OCCT_ACTUAL_LIB_DIR "${OCCT_BINARY_DIR}/mac64/clang/lib")
+    set(OCCT_LIB_PREFIX "lib")
+    set(OCCT_LIB_EXT ".a")
   elseif(WIN32)
     set(OCCT_ACTUAL_LIB_DIR "${OCCT_BINARY_DIR}/win64/vc14/lib")
+    set(OCCT_LIB_PREFIX "")
+    set(OCCT_LIB_EXT ".lib")
   else() # Linux
     set(OCCT_ACTUAL_LIB_DIR "${OCCT_BINARY_DIR}/lin64/gcc/lib")
+    set(OCCT_LIB_PREFIX "lib")
+    set(OCCT_LIB_EXT ".a")
   endif()
   
   message(STATUS "Using OCCT lib dir: ${OCCT_ACTUAL_LIB_DIR}")
   
-  # Now force-add all the libraries OCCT needs
-  # This is a more direct approach when find_library is not working reliably
-  target_link_libraries(${name} PRIVATE
-    ${OCCT_ACTUAL_LIB_DIR}/libTKernel.a
-    ${OCCT_ACTUAL_LIB_DIR}/libTKMath.a
-    ${OCCT_ACTUAL_LIB_DIR}/libTKG2d.a
-    ${OCCT_ACTUAL_LIB_DIR}/libTKG3d.a
-    ${OCCT_ACTUAL_LIB_DIR}/libTKGeomBase.a
-    ${OCCT_ACTUAL_LIB_DIR}/libTKBRep.a
-    ${OCCT_ACTUAL_LIB_DIR}/libTKGeomAlgo.a
-    ${OCCT_ACTUAL_LIB_DIR}/libTKTopAlgo.a
-    ${OCCT_ACTUAL_LIB_DIR}/libTKShHealing.a
-    ${OCCT_ACTUAL_LIB_DIR}/libTKPrim.a
-    ${OCCT_ACTUAL_LIB_DIR}/libTKBO.a
-    ${OCCT_ACTUAL_LIB_DIR}/libTKMesh.a
-    ${OCCT_ACTUAL_LIB_DIR}/libTKLCAF.a
+  # Create directories if they don't exist (for CI environments)
+  if(NOT EXISTS "${OCCT_ACTUAL_LIB_DIR}")
+    file(MAKE_DIRECTORY "${OCCT_ACTUAL_LIB_DIR}")
+    message(STATUS "Created OCCT library directory: ${OCCT_ACTUAL_LIB_DIR}")
+  endif()
+  
+  # Set the list of required OCCT libraries
+  set(OCCT_REQUIRED_LIBS
+    TKernel
+    TKMath
+    TKG2d
+    TKG3d
+    TKGeomBase
+    TKBRep
+    TKGeomAlgo
+    TKTopAlgo
+    TKShHealing
+    TKPrim
+    TKBO
+    TKMesh
+    TKLCAF
   )
+  
+  # First verify that OCCT build is complete by checking if crucial libraries exist
+  set(OCCT_BUILD_VERIFICATION_TARGET "${OCCT_ACTUAL_LIB_DIR}/${OCCT_LIB_PREFIX}TKernel${OCCT_LIB_EXT}")
+  if(NOT EXISTS "${OCCT_BUILD_VERIFICATION_TARGET}")
+    message(STATUS "OCCT verification target not found: ${OCCT_BUILD_VERIFICATION_TARGET}")
+    message(STATUS "This is expected on the first build. Ensuring dependency is established.")
+    message(STATUS "Explicitly adding dependency to ensure OCCT is built first.")
+    
+    # Add a stronger dependency chain to ensure OCCT is built before modules
+    set_property(TARGET ${name} PROPERTY EXCLUDE_FROM_ALL FALSE)
+  endif()
+  
+  # Now force-add all the libraries OCCT needs with platform-specific naming
+  foreach(occt_lib ${OCCT_REQUIRED_LIBS})
+    set(lib_path "${OCCT_ACTUAL_LIB_DIR}/${OCCT_LIB_PREFIX}${occt_lib}${OCCT_LIB_EXT}")
+    message(STATUS "Adding library: ${lib_path}")
+    target_link_libraries(${name} PRIVATE ${lib_path})
+  endforeach()
   
   # Install the module
   install(TARGETS ${name} LIBRARY DESTINATION compas_occt)

@@ -1,0 +1,53 @@
+﻿2025-05-17T17:12:28.3618280Z Current runner version: '2.324.0'
+2025-05-17T17:12:28.3635960Z ##[group]Operating System
+2025-05-17T17:12:28.3636450Z macOS
+2025-05-17T17:12:28.3636730Z 14.7.5
+2025-05-17T17:12:28.3637010Z 23H527
+2025-05-17T17:12:28.3637300Z ##[endgroup]
+2025-05-17T17:12:28.3637600Z ##[group]Runner Image
+2025-05-17T17:12:28.3637930Z Image: macos-14-arm64
+2025-05-17T17:12:28.3638260Z Version: 20250505.1431
+2025-05-17T17:12:28.3638920Z Included Software: https://github.com/actions/runner-images/blob/macos-14-arm64/20250505.1431/images/macos/macos-14-arm64-Readme.md
+2025-05-17T17:12:28.3639830Z Image Release: https://github.com/actions/runner-images/releases/tag/macos-14-arm64%2F20250505.1431
+2025-05-17T17:12:28.3640390Z ##[endgroup]
+2025-05-17T17:12:28.3640690Z ##[group]Runner Image Provisioner
+2025-05-17T17:12:28.3641060Z 2.0.422.1+55c30c14fe2a0a1547db1b656933ae07d97649a9
+2025-05-17T17:12:28.3641440Z ##[endgroup]
+2025-05-17T17:12:28.3642900Z ##[group]GITHUB_TOKEN Permissions
+2025-05-17T17:12:28.3643840Z Actions: write
+2025-05-17T17:12:28.3644200Z Attestations: write
+2025-05-17T17:12:28.3644490Z Checks: write
+2025-05-17T17:12:28.3644770Z Contents: write
+2025-05-17T17:12:28.3645060Z Deployments: write
+2025-05-17T17:12:28.3645350Z Discussions: write
+2025-05-17T17:12:28.3645630Z Issues: write
+2025-05-17T17:12:28.3645900Z Metadata: read
+2025-05-17T17:12:28.3646180Z Models: read
+2025-05-17T17:12:28.3646460Z Packages: write
+2025-05-17T17:12:28.3646740Z Pages: write
+2025-05-17T17:12:28.3647020Z PullRequests: write
+2025-05-17T17:12:28.3647330Z RepositoryProjects: write
+2025-05-17T17:12:28.3647650Z SecurityEvents: write
+2025-05-17T17:12:28.3647940Z Statuses: write
+2025-05-17T17:12:28.3648240Z ##[endgroup]
+2025-05-17T17:12:28.3649480Z Secret source: Actions
+2025-05-17T17:12:28.3649870Z Prepare workflow directory
+2025-05-17T17:12:28.3857310Z Prepare all required actions
+2025-05-17T17:12:28.3883730Z Getting action download info
+2025-05-17T17:12:28.7682930Z ##[group]Download immutable action package 'actions/checkout@v4'
+2025-05-17T17:12:28.7684200Z Version: 4.2.2
+2025-05-17T17:12:28.7685380Z Digest: sha256:ccb2698953eaebd21c7bf6268a94f9c26518a7e38e27e0b83c1fe1ad049819b1
+2025-05-17T17:12:28.7686790Z Source commit SHA: 11bd71901bbe5b1630ceea73d27597364c9af683
+2025-05-17T17:12:28.7687690Z ##[endgroup]
+2025-05-17T17:12:29.0516840Z Download action repository 'conda-incubator/setup-miniconda@v3' (SHA:505e6394dae86d6a5c7fbb6e3fb8938e3e863830)
+2025-05-17T17:12:30.1122470Z Download action repository 'compas-dev/compas-actions.build@v4' (SHA:e501794834b359eee3ed0f623d6c34dcd52e53b8)
+2025-05-17T17:12:30.9070560Z Getting action download info
+2025-05-17T17:12:31.2077810Z ##[group]Download immutable action package 'actions/setup-python@v5'
+2025-05-17T17:12:31.2078990Z Version: 5.6.0
+2025-05-17T17:12:31.2079930Z Digest: sha256:0b35a0c11c97499e4e0576589036d450b9f5f9da74b7774225b3614b57324404
+2025-05-17T17:12:31.2081370Z Source commit SHA: a26af69be951a213d495a4c3e4e4022e16d87065
+2025-05-17T17:12:31.2082290Z ##[endgroup]
+2025-05-17T17:12:31.7961700Z Download action repository 'NuGet/setup-nuget@v1.0.5' (SHA:04b0c2b8d1b97922f67eca497d7cf0bf17b8ffe1)
+2025-05-17T17:12:32.7704860Z Download action repository 'compas-dev/compas-actions.ghpython_components@v5' (SHA:dfec7e4fdb16add832793c1d5715287532841430)
+2025-05-17T17:12:33.9264500Z Download action repository 'conda-incubator/setup-miniconda@v2' (SHA:9f54435e0e72c53962ee863144e47a4b094bfd35)
+2025-05-17T17:12:35.6198910Z Complete job name: Build (macos-latest, 3.10)

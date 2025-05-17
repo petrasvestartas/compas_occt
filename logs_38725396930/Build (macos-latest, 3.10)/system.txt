@@ -1,0 +1,5 @@
+2025-05-17T17:12:23.6976911Z Requested labels: macos-latest
+2025-05-17T17:12:23.6976911Z Job defined at: petrasvestartas/compas_occt/.github/workflows/build.yml@refs/heads/main
+2025-05-17T17:12:23.6976911Z Waiting for a runner to pick up this job...
+2025-05-17T17:12:23.8470270Z Job is waiting for a hosted runner to come online.
+2025-05-17T17:12:23.8470330Z Job is about to start running on the hosted runner: GitHub Actions 1000002164

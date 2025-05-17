@@ -1,0 +1,20 @@
+﻿2025-05-17T17:12:35.0032316Z ##[group]Run actions/upload-artifact@v4
+2025-05-17T17:12:35.0032634Z with:
+2025-05-17T17:12:35.0032799Z   name: sdist
+2025-05-17T17:12:35.0032984Z   path: dist/*.tar.gz
+2025-05-17T17:12:35.0033193Z   if-no-files-found: warn
+2025-05-17T17:12:35.0033404Z   compression-level: 6
+2025-05-17T17:12:35.0033616Z   overwrite: false
+2025-05-17T17:12:35.0033803Z   include-hidden-files: false
+2025-05-17T17:12:35.0034016Z ##[endgroup]
+2025-05-17T17:12:35.2152604Z With the provided path, there will be 1 file uploaded
+2025-05-17T17:12:35.2158667Z Artifact name is valid!
+2025-05-17T17:12:35.2159838Z Root directory input is valid!
+2025-05-17T17:12:35.3232296Z Beginning upload of artifact content to blob storage
+2025-05-17T17:12:35.3984816Z Uploaded bytes 15908
+2025-05-17T17:12:35.4193909Z Finished uploading artifact content to blob storage!
+2025-05-17T17:12:35.4197558Z SHA256 digest of uploaded artifact zip is 7b2ea04b6cce08a95c3524f9d1a5bc6d08aa768e0a48967868a9bde06d341f29
+2025-05-17T17:12:35.4199443Z Finalizing artifact upload
+2025-05-17T17:12:35.4922225Z Artifact sdist.zip successfully finalized. Artifact ID 3144857709
+2025-05-17T17:12:35.4923616Z Artifact sdist has been successfully uploaded! Final size is 15908 bytes. Artifact ID is 3144857709
+2025-05-17T17:12:35.4931122Z Artifact download URL: https://github.com/petrasvestartas/compas_occt/actions/runs/15087355097/artifacts/3144857709
