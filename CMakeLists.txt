@@ -72,7 +72,10 @@ ExternalProject_Add(
     LOG_BUILD ON
     LOG_INSTALL ON
     DOWNLOAD_NO_PROGRESS ON
+    # Build with fewer parallel jobs to avoid memory issues
     BUILD_COMMAND ${CMAKE_COMMAND} --build . --config Release -j 2
+    # Add explicit install step to ensure libraries are installed to expected locations
+    INSTALL_COMMAND ${CMAKE_COMMAND} --install . --config Release
     # Run a command after the build to create a marker file
     COMMAND ${CMAKE_COMMAND} -E touch ${OCCT_MARKER_FILE}
 )
@@ -141,6 +144,7 @@ link_directories(
   ${OCCT_LIB_DIR}
 )
 
+
 # Define a function to add a nanobind module with common settings
 function(add_nanobind_extension name source)
   # Delay the module creation until after OCCT has been built
@@ -183,7 +187,7 @@ function(add_nanobind_extension name source)
   add_dependencies(${name} external_downloads)
   add_dependencies(${name} occt_libs)
   
-  # Hard-coded platform-specific library path based on what we know about OCCT
+    # Hard-coded platform-specific library path based on what we know about OCCT
   if(APPLE)
     set(OCCT_ACTUAL_LIB_DIR "${OCCT_BINARY_DIR}/mac64/clang/lib")
     set(OCCT_LIB_PREFIX "lib")
