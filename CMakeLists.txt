@@ -8,6 +8,35 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(ENABLE_PRECOMPILED_HEADERS "Enable precompiled headers for the build" ON)
 
+# Architecture detection for consistent builds
+if(APPLE)
+  # Get the current architecture
+  execute_process(
+      COMMAND uname -m
+      OUTPUT_VARIABLE HOST_ARCHITECTURE
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  message(STATUS "Host architecture detected: ${HOST_ARCHITECTURE}")
+  
+  # In cibuildwheel, we need to ensure x86_64 build for compatibility
+  if(DEFINED ENV{CIBUILDWHEEL})
+    set(TARGET_ARCHITECTURE "x86_64")
+    message(STATUS "CI environment detected, forcing x86_64 architecture")
+    
+    # Set global architecture flags for compiler and linker
+    set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "Build architectures for macOS" FORCE)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -arch x86_64")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -arch x86_64")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -arch x86_64")
+    set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -arch x86_64")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -arch x86_64")
+  else()
+    # Use detected architecture in local builds
+    set(TARGET_ARCHITECTURE "${HOST_ARCHITECTURE}")
+    set(CMAKE_OSX_ARCHITECTURES "${HOST_ARCHITECTURE}" CACHE STRING "Build architectures for macOS" FORCE)
+  endif()
+endif()
+
 # External dependencies
 include(ExternalProject)
 
@@ -43,11 +72,11 @@ endif()
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/compas_occt")
   message(STATUS "OCCT support detected, adding OCCT build")
   
-  # Simple target for OCCT dependencies
-  add_custom_target(occt_libs)
+  # Create a marker file to track OCCT build completion
+  set(OCCT_MARKER_FILE "${CMAKE_BINARY_DIR}/occt_built_marker.txt")
   
-  # Only try to build OCCT if not already present
-  if(NOT EXISTS "${OCCT_INSTALL_DIR}/include/opencascade")
+  # Force rebuild of OCCT in cibuildwheel, otherwise only build if not present
+  if(DEFINED ENV{CIBUILDWHEEL} OR NOT EXISTS "${OCCT_INSTALL_DIR}/include/opencascade")
     message(STATUS "OCCT not found, downloading and building")
     
     # Parse any additional OCCT args from the environment
@@ -58,7 +87,27 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/compas_occt")
       set(OCCT_EXTRA_CMAKE_ARGS "")
     endif()
 
-    # Set up standard OCCT build args
+    # Set architecture-specific flags based on current build architecture
+    if(APPLE)
+      # Get the current architecture
+      execute_process(
+          COMMAND uname -m
+          OUTPUT_VARIABLE HOST_ARCHITECTURE
+          OUTPUT_STRIP_TRAILING_WHITESPACE
+      )
+      message(STATUS "Host architecture detected: ${HOST_ARCHITECTURE}")
+      
+      # Set architecture flags for OCCT
+      if("${HOST_ARCHITECTURE}" STREQUAL "arm64")
+        set(ARCH_FLAGS "-DCMAKE_OSX_ARCHITECTURES=arm64")
+      else()
+        set(ARCH_FLAGS "-DCMAKE_OSX_ARCHITECTURES=x86_64")
+      endif()
+    else()
+      set(ARCH_FLAGS "")
+    endif()
+    
+    # Set up standard OCCT build args with architecture support
     set(OCCT_CMAKE_ARGS
       -DCMAKE_INSTALL_PREFIX=${OCCT_INSTALL_DIR}
       -DCMAKE_BUILD_TYPE=Release
@@ -76,6 +125,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/compas_occt")
       -DBUILD_MODULE_DataExchange=OFF
       -DBUILD_MODULE_Draw=OFF
       -DBUILD_MODULE_VisualizationTest=OFF
+      ${ARCH_FLAGS}
       ${OCCT_EXTRA_CMAKE_ARGS}
     )
 
@@ -89,18 +139,28 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/compas_occt")
         LOG_CONFIGURE ON
         LOG_BUILD ON
         LOG_INSTALL ON
-        DOWNLOAD_NO_PROGRESS ON
         # Build with fewer parallel jobs to avoid memory issues
         BUILD_COMMAND ${CMAKE_COMMAND} --build . --config Release -j 2
         # Add explicit install step to ensure libraries are installed to expected locations
         INSTALL_COMMAND ${CMAKE_COMMAND} --install . --config Release
+        # Create a marker file when the build is complete
+        COMMAND ${CMAKE_COMMAND} -E touch ${OCCT_MARKER_FILE}
     )
     
-    # Add to dependencies
-    add_dependencies(occt_libs occt_download)
+    # Create a custom target that depends on the marker file
+    add_custom_command(
+      OUTPUT ${OCCT_MARKER_FILE}
+      DEPENDS occt_download
+      COMMENT "Waiting for OCCT build to complete"
+    )
+    
+    add_custom_target(occt_libs DEPENDS ${OCCT_MARKER_FILE})
     add_dependencies(external_downloads occt_download)
+    
   else()
     message(STATUS "OCCT already installed")
+    # Create an empty target for dependency chain
+    add_custom_target(occt_libs)
   endif()
   
   # Set up OCCT include and lib paths
@@ -257,28 +317,86 @@ endfunction()
 # Primary module - always built
 add_nanobind_extension(_primitives src/primitives.cpp)
 
-# Check if we're running in a CI environment
-if(DEFINED ENV{CI} OR DEFINED ENV{CIBUILDWHEEL})
-  message(STATUS "CI environment detected - skipping advanced modules")
-  # Skip building the _curves module in CI environment to focus on core functionality
-else()
-  # Advanced OCCT modules - only built locally
-  message(STATUS "Building advanced modules including _curves")
-  add_nanobind_extension(_curves src/compas_occt/_curves.cpp)
+# The _curves module requires OCCT libraries - explicitly add a dependency
+message(STATUS "Building _curves module (depends on OCCT libraries)")
+
+# Create the extension module but make it explicitly depend on OCCT
+add_nanobind_extension(_curves src/compas_occt/_curves.cpp)
+
+# Make sure _curves depends on the occt_libs target to ensure correct build order
+add_dependencies(_curves occt_libs)
+
+# Special handling for _curves module which needs more OCCT components
+if(TARGET _curves)
+  # Define specific OCCT static libraries needed for the curves module
+  set(OCCT_REQUIRED_LIBS
+    TKernel
+    TKMath
+    TKG2d
+    TKG3d
+    TKGeomBase
+    TKBRep
+    TKGeomAlgo
+    TKTopAlgo
+    TKShHealing
+    TKPrim
+    TKBO
+    TKMesh
+    TKLCAF
+  )
   
-  # Special handling for _curves module which needs more OCCT components
-  if(TARGET _curves)
-    # Add additional OCCT libraries
-    target_link_libraries(_curves PRIVATE
-      ${CMAKE_DL_LIBS}  # Add dynamic loading libraries which are often needed
+  # Set platform-specific library paths and extensions
+  if(APPLE)
+    set(OCCT_LIB_LOCATIONS
+      "${OCCT_INSTALL_DIR}/lib"
+      "${OCCT_BINARY_DIR}/mac64/clang/lib"
+      "${OCCT_SOURCE_DIR}/mac64/clang/lib"
     )
-    
-    # On macOS, also add system frameworks that OCCT might need
-    if(APPLE)
-      find_library(COCOA_LIBRARY Cocoa)
-      find_library(IOKIT_LIBRARY IOKit)
-      target_link_libraries(_curves PRIVATE ${COCOA_LIBRARY} ${IOKIT_LIBRARY})
+    set(LIB_PREFIX "lib")
+    set(LIB_EXT ".a")
+  elseif(WIN32)
+    set(OCCT_LIB_LOCATIONS
+      "${OCCT_INSTALL_DIR}/lib"
+      "${OCCT_BINARY_DIR}/win64/vc14/lib"
+      "${OCCT_SOURCE_DIR}/win64/vc14/lib"
+    )
+    set(LIB_PREFIX "")
+    set(LIB_EXT ".lib")
+  else() # Linux
+    set(OCCT_LIB_LOCATIONS
+      "${OCCT_INSTALL_DIR}/lib"
+      "${OCCT_BINARY_DIR}/lin64/gcc/lib"
+      "${OCCT_SOURCE_DIR}/lin64/gcc/lib"
+    )
+    set(LIB_PREFIX "lib")
+    set(LIB_EXT ".a")
+  endif()
+  
+  # Add each OCCT static library explicitly with full paths
+  foreach(OCCT_LIB ${OCCT_REQUIRED_LIBS})
+    set(LIB_FOUND FALSE)
+    foreach(LOCATION ${OCCT_LIB_LOCATIONS})
+      set(FULL_LIB_PATH "${LOCATION}/${LIB_PREFIX}${OCCT_LIB}${LIB_EXT}")
+      if(EXISTS "${FULL_LIB_PATH}")
+        message(STATUS "Found static OCCT library: ${FULL_LIB_PATH}")
+        target_link_libraries(_curves PRIVATE "${FULL_LIB_PATH}")
+        set(LIB_FOUND TRUE)
+        break()
+      endif()
+    endforeach()
+    if(NOT LIB_FOUND)
+      message(WARNING "Could not find static library for ${OCCT_LIB}")
     endif()
+  endforeach()
+  
+  # Add system libraries needed for static linking
+  target_link_libraries(_curves PRIVATE ${CMAKE_DL_LIBS})
+  
+  # On macOS, also add system frameworks that OCCT might need
+  if(APPLE)
+    find_library(COCOA_LIBRARY Cocoa)
+    find_library(IOKIT_LIBRARY IOKit)
+    target_link_libraries(_curves PRIVATE ${COCOA_LIBRARY} ${IOKIT_LIBRARY})
   endif()
 endif()
 
