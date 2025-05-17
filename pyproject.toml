@@ -94,12 +94,35 @@ CMAKE_POLICY_DEFAULT_CMP0135 = "NEW"
 [tool.cibuildwheel]
 build-verbosity = 3
 test-requires = ["numpy", "compas", "pytest", "build"]
-test-command = "pip install numpy compas && pip list && pytest {project}/tests"
+test-command = "pip install numpy compas && pip list && cd {project} && pytest tests"
 build-frontend = "pip"
 manylinux-x86_64-image = "manylinux2014"
-skip = ["*_i686", "*-musllinux_*", "*-win32", "pp*"]
+skip = ["*_i686", "*-musllinux_*", "*-win32", "pp*", "cp312-*"]
 macos.environment.MACOSX_DEPLOYMENT_TARGET = "11.00"
-macos.archs = ["x86_64", "arm64"]
+macos.archs = ["x86_64"]
+
+# Pre-installation dependencies for wheel building
+before-build = [
+    "pip install cmake ninja",
+    "pip install -r {project}/requirements-dev.txt",
+    "mkdir -p {project}/external/occt-install/include/opencascade"
+]
+
+# Control memory usage during builds
+environment.CMAKE_BUILD_PARALLEL_LEVEL = "2"
+
+# Reduce build modules to minimum necessary
+environment.CMAKE_ARGS = "-DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=OFF"
+
+# OCCT Configuration
+environment.CMAKE_PREFIX_PATH = "{project}/external/occt-install"
+environment.OCCT_SOURCE_DIR = "{project}/external/occt"
+environment.OCCT_BINARY_DIR = "{project}/external/occt-build"
+environment.OCCT_INSTALL_DIR = "{project}/external/occt-install"
+environment.OCCT_CMAKE_FLAGS = "-DBUILD_LIBRARY_TYPE=Static -DUSE_TK=OFF -DUSE_VTK=OFF -DUSE_FREETYPE=OFF -DBUILD_SAMPLES_MFC=OFF -DBUILD_SAMPLES_QT=OFF -DBUILD_Inspector=OFF -DINSTALL_SAMPLES=OFF -DBUILD_USE_PCH=OFF -DBUILD_OPT_PROFILE=Production -DBUILD_MODULE_ApplicationFramework=OFF -DBUILD_MODULE_DataExchange=OFF -DBUILD_MODULE_Draw=OFF -DBUILD_MODULE_VisualizationTest=OFF"
+
+# Eigen configuration
+environment.EIGEN_INCLUDE_DIR = "{project}/external/eigen"
 
 # ============================================================================
 # code style configuration

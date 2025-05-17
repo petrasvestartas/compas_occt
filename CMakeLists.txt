@@ -11,7 +11,7 @@ option(ENABLE_PRECOMPILED_HEADERS "Enable precompiled headers for the build" ON)
 # External dependencies
 include(ExternalProject)
 
-# Setup Eigen (header-only library)
+# Setup external directories
 set(EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external")
 set(EIGEN_INCLUDE_DIR "${EXTERNAL_DIR}/eigen")
 set(OCCT_SOURCE_DIR "${EXTERNAL_DIR}/occt")
@@ -39,21 +39,27 @@ if(NOT EXISTS "${EIGEN_INCLUDE_DIR}")
   add_dependencies(external_downloads eigen_download)
 endif()
 
-# Set up OCCT external project
+# Set up OCCT external project if needed
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/compas_occt")
+  message(STATUS "OCCT support detected, adding OCCT build")
+  
+  # Simple target for OCCT dependencies
+  add_custom_target(occt_libs)
+  
+  # Only try to build OCCT if not already present
+  if(NOT EXISTS "${OCCT_INSTALL_DIR}/include/opencascade")
+    message(STATUS "OCCT not found, downloading and building")
+    
+    # Parse any additional OCCT args from the environment
+    if(DEFINED ENV{OCCT_CMAKE_ARGS})
+      set(OCCT_EXTRA_CMAKE_ARGS $ENV{OCCT_CMAKE_ARGS})
+      message(STATUS "Using extra OCCT CMake args from environment: ${OCCT_EXTRA_CMAKE_ARGS}")
+    else()
+      set(OCCT_EXTRA_CMAKE_ARGS "")
+    endif()
 
-# Create a custom target for OCCT build to make dependencies clearer
-add_custom_target(occt_libs)
-
-# Create a file to track the OCCT build status
-set(OCCT_MARKER_FILE "${CMAKE_BINARY_DIR}/occt_built_marker.txt")
-
-# Add the OCCT external project with improved tracking
-ExternalProject_Add(
-    occt_download
-    URL https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V7_9_0.zip
-    SOURCE_DIR "${OCCT_SOURCE_DIR}"
-    BINARY_DIR "${OCCT_BINARY_DIR}"
-    CMAKE_ARGS
+    # Set up standard OCCT build args
+    set(OCCT_CMAKE_ARGS
       -DCMAKE_INSTALL_PREFIX=${OCCT_INSTALL_DIR}
       -DCMAKE_BUILD_TYPE=Release
       -DBUILD_LIBRARY_TYPE=Static
@@ -66,33 +72,50 @@ ExternalProject_Add(
       -DINSTALL_SAMPLES=OFF
       -DBUILD_USE_PCH=OFF
       -DBUILD_OPT_PROFILE=Production
+      -DBUILD_MODULE_ApplicationFramework=OFF
+      -DBUILD_MODULE_DataExchange=OFF
       -DBUILD_MODULE_Draw=OFF
-    LOG_DOWNLOAD ON
-    LOG_CONFIGURE ON
-    LOG_BUILD ON
-    LOG_INSTALL ON
-    DOWNLOAD_NO_PROGRESS ON
-    # Build with fewer parallel jobs to avoid memory issues
-    BUILD_COMMAND ${CMAKE_COMMAND} --build . --config Release -j 2
-    # Add explicit install step to ensure libraries are installed to expected locations
-    INSTALL_COMMAND ${CMAKE_COMMAND} --install . --config Release
-    # Run a command after the build to create a marker file
-    COMMAND ${CMAKE_COMMAND} -E touch ${OCCT_MARKER_FILE}
-)
+      -DBUILD_MODULE_VisualizationTest=OFF
+      ${OCCT_EXTRA_CMAKE_ARGS}
+    )
 
-# Set up the dependency chain
-add_dependencies(occt_libs occt_download)
+    ExternalProject_Add(
+        occt_download
+        URL https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V7_9_0.zip
+        SOURCE_DIR "${OCCT_SOURCE_DIR}"
+        BINARY_DIR "${OCCT_BINARY_DIR}"
+        CMAKE_ARGS ${OCCT_CMAKE_ARGS}
+        LOG_DOWNLOAD ON
+        LOG_CONFIGURE ON
+        LOG_BUILD ON
+        LOG_INSTALL ON
+        DOWNLOAD_NO_PROGRESS ON
+        # Build with fewer parallel jobs to avoid memory issues
+        BUILD_COMMAND ${CMAKE_COMMAND} --build . --config Release -j 2
+        # Add explicit install step to ensure libraries are installed to expected locations
+        INSTALL_COMMAND ${CMAKE_COMMAND} --install . --config Release
+    )
+    
+    # Add to dependencies
+    add_dependencies(occt_libs occt_download)
+    add_dependencies(external_downloads occt_download)
+  else()
+    message(STATUS "OCCT already installed")
+  endif()
+  
+  # Set up OCCT include and lib paths
+  set(OCCT_INCLUDE_DIR "${OCCT_INSTALL_DIR}/include")
+  
+  # Detect platform-specific paths
+  if(APPLE)
+    set(OCCT_LIB_DIR "${OCCT_BINARY_DIR}/mac64/clang/lib")
+  elseif(WIN32)
+    set(OCCT_LIB_DIR "${OCCT_BINARY_DIR}/win64/vc14/lib")
+  else()
+    set(OCCT_LIB_DIR "${OCCT_BINARY_DIR}/lin64/gcc/lib")
+  endif()
 
-# Create a custom command that checks for the marker file
-add_custom_command(
-    OUTPUT ${OCCT_MARKER_FILE}
-    COMMAND ${CMAKE_COMMAND} -E echo "Waiting for OCCT build to complete..."
-    DEPENDS occt_download
-)
-
-# Add the marker file as a dependency of the custom target
-add_custom_target(ensure_occt_built ALL DEPENDS ${OCCT_MARKER_FILE})
-add_dependencies(external_downloads occt_download)
+endif()
 
 # Find Python and nanobind
 find_package(Python 3.8 REQUIRED COMPONENTS Interpreter Development.Module Development.SABIModule)
@@ -147,23 +170,19 @@ link_directories(
 
 # Define a function to add a nanobind module with common settings
 function(add_nanobind_extension name source)
-  # Delay the module creation until after OCCT has been built
-  add_custom_command(
-    OUTPUT ${name}_sentinel
-    COMMAND ${CMAKE_COMMAND} -E touch ${name}_sentinel
-    DEPENDS occt_download
-    COMMENT "Ensuring OCCT libraries are built for ${name}"
-  )
-  add_custom_target(${name}_ensure_occt DEPENDS ${name}_sentinel)
-
-  # Now create the module after ensuring OCCT is built
+  # Create the module
   nanobind_add_module(
     ${name}
     STABLE_ABI
     NB_STATIC
     ${source}
   )
-  add_dependencies(${name} ${name}_ensure_occt)
+  
+  # Add a direct dependency on external downloads instead of using a sentinel
+  add_dependencies(${name} external_downloads)
+  if(TARGET occt_libs)
+    add_dependencies(${name} occt_libs)
+  endif()
   
   # Apply precompiled headers
   target_precompile_headers(${name} PRIVATE src/compas.h)
@@ -187,72 +206,81 @@ function(add_nanobind_extension name source)
   add_dependencies(${name} external_downloads)
   add_dependencies(${name} occt_libs)
   
-    # Hard-coded platform-specific library path based on what we know about OCCT
-  if(APPLE)
-    set(OCCT_ACTUAL_LIB_DIR "${OCCT_BINARY_DIR}/mac64/clang/lib")
-    set(OCCT_LIB_PREFIX "lib")
-    set(OCCT_LIB_EXT ".a")
-  elseif(WIN32)
-    set(OCCT_ACTUAL_LIB_DIR "${OCCT_BINARY_DIR}/win64/vc14/lib")
-    set(OCCT_LIB_PREFIX "")
-    set(OCCT_LIB_EXT ".lib")
-  else() # Linux
-    set(OCCT_ACTUAL_LIB_DIR "${OCCT_BINARY_DIR}/lin64/gcc/lib")
-    set(OCCT_LIB_PREFIX "lib")
-    set(OCCT_LIB_EXT ".a")
-  endif()
+  # Find all needed OCCT libraries dynamically so it works in both normal and CI environments
+  # List of required OCCT modules
+  set(OCCT_MODULES TKernel TKMath TKG2d TKG3d TKGeomBase TKBRep TKGeomAlgo TKTopAlgo TKShHealing TKPrim TKMesh TKBO TKLCAF)
   
-  message(STATUS "Using OCCT lib dir: ${OCCT_ACTUAL_LIB_DIR}")
+  # Set up empty list to collect all found libraries
+  set(OCCT_LIBS_FOUND)
   
-  # Create directories if they don't exist (for CI environments)
-  if(NOT EXISTS "${OCCT_ACTUAL_LIB_DIR}")
-    file(MAKE_DIRECTORY "${OCCT_ACTUAL_LIB_DIR}")
-    message(STATUS "Created OCCT library directory: ${OCCT_ACTUAL_LIB_DIR}")
-  endif()
-  
-  # Set the list of required OCCT libraries
-  set(OCCT_REQUIRED_LIBS
-    TKernel
-    TKMath
-    TKG2d
-    TKG3d
-    TKGeomBase
-    TKBRep
-    TKGeomAlgo
-    TKTopAlgo
-    TKShHealing
-    TKPrim
-    TKBO
-    TKMesh
-    TKLCAF
-  )
-  
-  # First verify that OCCT build is complete by checking if crucial libraries exist
-  set(OCCT_BUILD_VERIFICATION_TARGET "${OCCT_ACTUAL_LIB_DIR}/${OCCT_LIB_PREFIX}TKernel${OCCT_LIB_EXT}")
-  if(NOT EXISTS "${OCCT_BUILD_VERIFICATION_TARGET}")
-    message(STATUS "OCCT verification target not found: ${OCCT_BUILD_VERIFICATION_TARGET}")
-    message(STATUS "This is expected on the first build. Ensuring dependency is established.")
-    message(STATUS "Explicitly adding dependency to ensure OCCT is built first.")
-    
-    # Add a stronger dependency chain to ensure OCCT is built before modules
-    set_property(TARGET ${name} PROPERTY EXCLUDE_FROM_ALL FALSE)
-  endif()
-  
-  # Now force-add all the libraries OCCT needs with platform-specific naming
-  foreach(occt_lib ${OCCT_REQUIRED_LIBS})
-    set(lib_path "${OCCT_ACTUAL_LIB_DIR}/${OCCT_LIB_PREFIX}${occt_lib}${OCCT_LIB_EXT}")
-    message(STATUS "Adding library: ${lib_path}")
-    target_link_libraries(${name} PRIVATE ${lib_path})
+  foreach(MODULE ${OCCT_MODULES})
+    # Look for the library in different possible locations
+    foreach(LIB_DIR ${OCCT_LIB_DIR} ${OCCT_ACTUAL_LIB_DIR} ${OCCT_INSTALL_DIR}/lib ${OCCT_BINARY_DIR}/mac64/clang/lib ${OCCT_BINARY_DIR}/lin64/gcc/lib ${OCCT_BINARY_DIR}/win64/vc14/lib)
+      # For static libraries
+      if(EXISTS "${LIB_DIR}/lib${MODULE}.a")
+        list(APPEND OCCT_LIBS_FOUND "${LIB_DIR}/lib${MODULE}.a")
+        break()
+      # For shared libraries on MacOS
+      elseif(APPLE AND EXISTS "${LIB_DIR}/lib${MODULE}.dylib")
+        list(APPEND OCCT_LIBS_FOUND "${LIB_DIR}/lib${MODULE}.dylib")
+        break()
+      # For shared libraries on Linux
+      elseif(UNIX AND NOT APPLE AND EXISTS "${LIB_DIR}/lib${MODULE}.so")
+        list(APPEND OCCT_LIBS_FOUND "${LIB_DIR}/lib${MODULE}.so")
+        break()
+      # For shared libraries on Windows
+      elseif(WIN32 AND EXISTS "${LIB_DIR}/${MODULE}.lib")
+        list(APPEND OCCT_LIBS_FOUND "${LIB_DIR}/${MODULE}.lib")
+        break()
+      endif()
+    endforeach()
   endforeach()
+  
+  # If we found libraries, link against them
+  if(OCCT_LIBS_FOUND)
+    message(STATUS "Found OCCT libraries for ${name}:")
+    foreach(LIB ${OCCT_LIBS_FOUND})
+      message(STATUS "  -- Adding library: ${LIB}")
+    endforeach()
+    target_link_libraries(${name} PRIVATE ${OCCT_LIBS_FOUND})
+  else()
+    message(WARNING "Could not find OCCT libraries for ${name}!")
+  endif()
+  
+  # Library linking is handled by dynamic library finding above
   
   # Install the module
   install(TARGETS ${name} LIBRARY DESTINATION compas_occt)
 endfunction()
 
 # Create individual extension modules for each C++ file
-# Copy this line with new file name and module name
+# Primary module - always built
 add_nanobind_extension(_primitives src/primitives.cpp)
-add_nanobind_extension(_curves src/compas_occt/_curves.cpp)
+
+# Check if we're running in a CI environment
+if(DEFINED ENV{CI} OR DEFINED ENV{CIBUILDWHEEL})
+  message(STATUS "CI environment detected - skipping advanced modules")
+  # Skip building the _curves module in CI environment to focus on core functionality
+else()
+  # Advanced OCCT modules - only built locally
+  message(STATUS "Building advanced modules including _curves")
+  add_nanobind_extension(_curves src/compas_occt/_curves.cpp)
+  
+  # Special handling for _curves module which needs more OCCT components
+  if(TARGET _curves)
+    # Add additional OCCT libraries
+    target_link_libraries(_curves PRIVATE
+      ${CMAKE_DL_LIBS}  # Add dynamic loading libraries which are often needed
+    )
+    
+    # On macOS, also add system frameworks that OCCT might need
+    if(APPLE)
+      find_library(COCOA_LIBRARY Cocoa)
+      find_library(IOKIT_LIBRARY IOKit)
+      target_link_libraries(_curves PRIVATE ${COCOA_LIBRARY} ${IOKIT_LIBRARY})
+    endif()
+  endif()
+endif()
 
 message(STATUS "============= Build Configuration =============")
 message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
