@@ -22,6 +22,7 @@ If you are a software developer, and this is your own package, then it is usuall
 
 ```bash
 pip install --no-build-isolation -ve .
+cibuildwheel --output-dir wheelhouse .
 ```
 
 ## Documentation

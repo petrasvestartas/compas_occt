@@ -9,19 +9,13 @@ set(CMAKE_CXX_EXTENSIONS OFF CACHE BOOL "Disable compiler-specific extensions." 
 
 # Configure macOS to build universal binaries (both arm64 and x86_64)
 if(APPLE)
-  # Check if we're being called from cibuildwheel with specific architecture requirements
-  if(DEFINED ENV{CMAKE_OSX_ARCHITECTURES})
-    # Use the environment variable if set
-    set(CMAKE_OSX_ARCHITECTURES "$ENV{CMAKE_OSX_ARCHITECTURES}" CACHE STRING "Build architectures for macOS" FORCE)
-  else()
-    # Build universal binary by default for maximum compatibility
-    set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "Build architectures for macOS" FORCE)
-  endif()
+  # Always build universal binaries for maximum compatibility
+  set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Build architectures for macOS" FORCE)
   
   # Set minimum macOS version
   set(CMAKE_OSX_DEPLOYMENT_TARGET "11.00" CACHE STRING "Minimum macOS deployment version" FORCE)
   
-  message(STATUS "Building for macOS architectures: ${CMAKE_OSX_ARCHITECTURES}")
+  message(STATUS "Building universal binary for macOS with architectures: ${CMAKE_OSX_ARCHITECTURES}")
 endif()
 
 # For Python compatibility, ensure ABI compatibility with libstdc++
@@ -37,10 +31,20 @@ find_package(Python 3.8 REQUIRED COMPONENTS Interpreter Development.Module Devel
 # Then include nanobind for Python bindings
 find_package(nanobind CONFIG REQUIRED)
 
-# Find Threads package for pthreads support
+# Improved pthread handling
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads REQUIRED)
 if(NOT Threads_FOUND)
   message(FATAL_ERROR "Required dependency 'Threads' not found")
+endif()
+
+# Add special handling for Windows
+if(WIN32)
+  add_definitions(-D_WIN32_WINNT=0x0601)
+  if(MSVC)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+  endif()
 endif()
 
 # External dependencies will be placed in the build directory to keep the src tree clean
@@ -204,11 +208,20 @@ if(OCCT_DOWNLOAD_NEEDED)
     # Format the architectures as a semicolon-separated CMake list
     string(REPLACE ";" "\\;" OCCT_OSX_ARCHS "${CMAKE_OSX_ARCHITECTURES}")
     
+    # Force the same architectures for OCCT
     list(APPEND OCCT_CMAKE_ARGS
       "-DCMAKE_OSX_ARCHITECTURES=${OCCT_OSX_ARCHS}"
       "-DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}"
     )
-    message(STATUS "Building OCCT for macOS architectures: ${CMAKE_OSX_ARCHITECTURES}")
+    
+    # Additional macOS-specific settings for better compatibility
+    list(APPEND OCCT_CMAKE_ARGS
+      "-DBUILD_MODULE_Draw=OFF"
+      "-DBUILD_DOC_Overview=OFF"
+      "-DBUILD_LIBRARY_TYPE=Static"
+    )
+    
+    message(STATUS "Building OCCT universal binary for macOS with archs: ${CMAKE_OSX_ARCHITECTURES}")
   endif()
   
   # Windows-specific settings to improve build reliability
@@ -306,17 +319,72 @@ function(add_nanobind_extension name source)
     target_include_directories(${name} PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/src
       ${EIGEN_INCLUDE_DIR}
-      ${OCCT_INCLUDE_DIR}
+      "${OCCT_INSTALL_DIR}/include/opencascade"
       ${nanobind_INCLUDE_DIRS}
     )
   endif()
-  # Create proper dependency chain
-  add_dependencies(${name} occt_libraries_built)
+  
+  # Link against the appropriate OCCT libraries for each platform
+  if(WIN32)
+    # Windows configuration
+    target_link_libraries(${name} PRIVATE
+      # OCCT libraries in proper dependency order
+      # Boolean operations and complex shape handling
+      "${OCCT_LIBRARY_BOOL}"
+      "${OCCT_LIBRARY_FILLET}"
+      "${OCCT_LIBRARY_OFFSET}"
+      "${OCCT_LIBRARY_FEAT}"
+      "${OCCT_LIBRARY_PRIM}"
+      "${OCCT_LIBRARY_BO}"
+      "${OCCT_LIBRARY_MESH}"
+      "${OCCT_LIBRARY_HLR}"
+      "${OCCT_LIBRARY_SHHEALING}"
+      
+      # Mid-level algorithms and topology
+      "${OCCT_LIBRARY_TOPALGO}"
+      "${OCCT_LIBRARY_GEOMALGO}"
+      
+      # Geometry and representations
+      "${OCCT_LIBRARY_BREP}"
+      "${OCCT_LIBRARY_GEOMBASE}"
+      "${OCCT_LIBRARY_G3D}"
+      "${OCCT_LIBRARY_G2D}"
+      
+      # Core libraries
+      "${OCCT_LIBRARY_MATH}"
+      "${OCCT_LIBRARY_KERNEL}"
+    )
+  else()
+    # Unix/Linux configuration
+    target_link_libraries(${name} PRIVATE
+      # OCCT libraries in proper dependency order
+      "${OCCT_LIBRARY_BOOL}"
+      "${OCCT_LIBRARY_FILLET}"
+      "${OCCT_LIBRARY_OFFSET}"
+      "${OCCT_LIBRARY_FEAT}"
+      "${OCCT_LIBRARY_PRIM}"
+      "${OCCT_LIBRARY_BO}"
+      "${OCCT_LIBRARY_MESH}"
+      "${OCCT_LIBRARY_HLR}"
+      "${OCCT_LIBRARY_SHHEALING}"
+      "${OCCT_LIBRARY_TOPALGO}"
+      "${OCCT_LIBRARY_GEOMALGO}"
+      "${OCCT_LIBRARY_BREP}"
+      "${OCCT_LIBRARY_GEOMBASE}"
+      "${OCCT_LIBRARY_G3D}"
+      "${OCCT_LIBRARY_G2D}"
+      "${OCCT_LIBRARY_MATH}"
+      "${OCCT_LIBRARY_KERNEL}"
+    )
+  endif()
   
   # Important compiler flags for OCCT
   target_compile_definitions(${name} PRIVATE
-    HAVE_OPENCASCADE
-    OCCT_NO_PLUGINS
+    HAVE_OCCT
+    HAVE_TKG2d
+    HAVE_TKG3d
+    HAVE_TKGeomBase
+    HAVE_TKBRep
   )
   
   # Add compiler-specific include path options for Windows
