@@ -20,7 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Fix release github action to build 12 jobs.
+
 ### Removed
+
+- Remove unnecessary bash commands in pyproject.toml.
 
 
 ## [0.1.2] 2025-05-18
