@@ -105,10 +105,11 @@ macos.archs = ["x86_64"]
 before-build = [
     "pip install cmake ninja",
     "pip install -r {project}/requirements-dev.txt",
-    # Clean any previous OCCT build to ensure fresh build for this architecture
-    "rm -rf {project}/external/occt {project}/external/occt-build {project}/external/occt-install",
-    "mkdir -p {project}/external/occt-install/include/opencascade"
 ]
+
+# # Clean any previous OCCT build to ensure fresh build for this architecture
+# "rm -rf {project}/external/occt {project}/external/occt-build {project}/external/occt-install",
+# "mkdir -p {project}/external/occt-install/include/opencascade"
 
 # Control memory usage during builds
 environment.CMAKE_BUILD_PARALLEL_LEVEL = "2"
