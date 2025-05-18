@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Universal Binary Support for macOS.
+- OCCT Configuration Fixed
+- OCCT Configuration Fixed
+
 ### Changed
 
 ### Removed

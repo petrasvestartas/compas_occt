@@ -182,5 +182,3 @@ replace = "{new_version}"
 filename = "CHANGELOG.md"
 search = "Unreleased"
 replace = "[{new_version}] {now:%Y-%m-%d}"
-
-

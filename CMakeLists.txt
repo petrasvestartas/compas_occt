@@ -7,6 +7,23 @@ set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ standard to use for the build." FORC
 set(CMAKE_CXX_STANDARD_REQUIRED ON CACHE BOOL "Require the specified C++ standard." FORCE)
 set(CMAKE_CXX_EXTENSIONS OFF CACHE BOOL "Disable compiler-specific extensions." FORCE)
 
+# Configure macOS to build universal binaries (both arm64 and x86_64)
+if(APPLE)
+  # Check if we're being called from cibuildwheel with specific architecture requirements
+  if(DEFINED ENV{CMAKE_OSX_ARCHITECTURES})
+    # Use the environment variable if set
+    set(CMAKE_OSX_ARCHITECTURES "$ENV{CMAKE_OSX_ARCHITECTURES}" CACHE STRING "Build architectures for macOS" FORCE)
+  else()
+    # Build universal binary by default for maximum compatibility
+    set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "Build architectures for macOS" FORCE)
+  endif()
+  
+  # Set minimum macOS version
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "11.00" CACHE STRING "Minimum macOS deployment version" FORCE)
+  
+  message(STATUS "Building for macOS architectures: ${CMAKE_OSX_ARCHITECTURES}")
+endif()
+
 # For Python compatibility, ensure ABI compatibility with libstdc++
 if(CMAKE_COMPILER_IS_GNUCXX)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=0")
@@ -19,7 +36,12 @@ find_package(Python 3.8 REQUIRED COMPONENTS Interpreter Development.Module Devel
 
 # Then include nanobind for Python bindings
 find_package(nanobind CONFIG REQUIRED)
+
+# Find Threads package for pthreads support
 find_package(Threads REQUIRED)
+if(NOT Threads_FOUND)
+  message(FATAL_ERROR "Required dependency 'Threads' not found")
+endif()
 
 # External dependencies will be placed in the build directory to keep the src tree clean
 set(EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external")
@@ -155,13 +177,8 @@ endif()
 # 3. OCCT setup
 if(OCCT_DOWNLOAD_NEEDED)
   message(STATUS "Setting up OCCT build...")
-  ExternalProject_Add(
-    occt_external
-    URL https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V7_9_0.zip
-    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/occt_prefix"
-    SOURCE_DIR "${OCCT_DIR}"
-    BINARY_DIR "${OCCT_BUILD_DIR}"
-    CMAKE_ARGS 
+  # Prepare OCCT CMake arguments
+  set(OCCT_CMAKE_ARGS
       -DCMAKE_INSTALL_PREFIX=${OCCT_INSTALL_DIR}
       -DCMAKE_BUILD_TYPE=Release
       -DBUILD_LIBRARY_TYPE=Static
@@ -180,6 +197,24 @@ if(OCCT_DOWNLOAD_NEEDED)
       -DBUILD_MODULE_VisualizationTest=OFF
       -DBUILD_MODULE_Visualization=OFF
       -DUSE_OPENGL=OFF
+  )
+  
+  # Add platform-specific arguments
+  if(APPLE)
+    list(APPEND OCCT_CMAKE_ARGS
+      -DCMAKE_OSX_ARCHITECTURES="${CMAKE_OSX_ARCHITECTURES}"
+      -DCMAKE_OSX_DEPLOYMENT_TARGET="${CMAKE_OSX_DEPLOYMENT_TARGET}"
+    )
+    message(STATUS "Building OCCT for macOS architectures: ${CMAKE_OSX_ARCHITECTURES}")
+  endif()
+  
+  ExternalProject_Add(
+    occt_external
+    URL https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V7_9_0.zip
+    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/occt_prefix"
+    SOURCE_DIR "${OCCT_DIR}"
+    BINARY_DIR "${OCCT_BUILD_DIR}"
+    CMAKE_ARGS ${OCCT_CMAKE_ARGS}
     # Limit to 2 parallel jobs to avoid memory issues
     BUILD_COMMAND ${CMAKE_COMMAND} --build . --config Release -j 2
     INSTALL_COMMAND ${CMAKE_COMMAND} --install . --config Release
