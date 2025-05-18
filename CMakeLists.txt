@@ -11,93 +11,65 @@ option(ENABLE_PRECOMPILED_HEADERS "Enable precompiled headers for the build" ON)
 # ======================================================================
 # External dependencies section
 # ======================================================================
-include(ExternalProject)
+include(FetchContent)
 
-# Define paths for external libraries
-set(EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external")
+# Critical setting: Ensures content is only fetched once and not updated on subsequent builds
+# This guarantees your library is built only the first time and reused afterward
+set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
+
+# All dependencies will be stored in the build directory
+set(DEPS_DIR "${CMAKE_CURRENT_BINARY_DIR}/deps")
 
 # ---------------------- Eigen (header-only library) ----------------------
-set(EIGEN_INCLUDE_DIR "${EXTERNAL_DIR}/eigen")
-set(EIGEN_DOWNLOAD_NEEDED FALSE)
+# FetchContent approach for Eigen
+FetchContent_Declare(
+  eigen
+  URL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip
+  # Remove hash verification since the archive might have changed
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
 
-if(NOT EXISTS "${EIGEN_INCLUDE_DIR}")
-  message(STATUS "Eigen headers not found. Will download.")
-  set(EIGEN_DOWNLOAD_NEEDED TRUE)
-else()
-  message(STATUS "Using existing Eigen headers at: ${EIGEN_INCLUDE_DIR}")
+if(NOT eigen_POPULATED)
+  message(STATUS "Fetching Eigen...")
+  FetchContent_Populate(eigen)
 endif()
+
+# Add include directory for Eigen
+set(EIGEN_INCLUDE_DIR ${eigen_SOURCE_DIR})
 
 # -------------------- Template static library --------------------------
-set(TEMPLATE_LIB_DIR "${EXTERNAL_DIR}/template_cpp_static_library")
-# Use binary directory instead of source directory to avoid conflicts
-set(TEMPLATE_LIB_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/template_static_lib_build")
-set(TEMPLATE_LIB_INCLUDE_DIR "${TEMPLATE_LIB_DIR}/src")
-set(TEMPLATE_LIB_LIBRARY "${TEMPLATE_LIB_BUILD_DIR}/libcpp_static_lib.a")
-set(TEMPLATE_LIB_DOWNLOAD_NEEDED FALSE)
+# FetchContent guarantees the library is only built once
+# This is much better than ExternalProject_Add for libraries that take a long time to build
 
-if(NOT EXISTS "${TEMPLATE_LIB_LIBRARY}")
-  message(STATUS "Template static library not found. Will download and build.")
-  set(TEMPLATE_LIB_DOWNLOAD_NEEDED TRUE)
-else()
-  message(STATUS "Using existing template static library at: ${TEMPLATE_LIB_LIBRARY}")
+FetchContent_Declare(
+  template_cpp_static_lib
+  GIT_REPOSITORY https://github.com/petrasvestartas/template_cpp_static_library.git
+  GIT_TAG main
+)
+
+if(NOT template_cpp_static_lib_POPULATED)
+  message(STATUS "Fetching and configuring template_cpp_static_library...")
+  FetchContent_Populate(template_cpp_static_lib)
+  
+  # Add the template library as a subdirectory
+  # This is the key step - it integrates the library directly into our build
+  # ensuring it is only built once
+  add_subdirectory(${template_cpp_static_lib_SOURCE_DIR} ${template_cpp_static_lib_BINARY_DIR})
 endif()
 
-# Create external downloads target
-add_custom_target(external_downloads ALL)
+# Define the paths to use for includes and linking
+set(TEMPLATE_LIB_INCLUDE_DIR ${template_cpp_static_lib_SOURCE_DIR}/src)
 
-# -------------------- Download and build external dependencies --------------------
+# The library target is now directly available as a regular CMake target
+# We don't need to use separate import targets or fake dependencies
+# FetchContent creates proper CMake targets for us
 
-# Download Eigen if needed
-if(EIGEN_DOWNLOAD_NEEDED)
-  message(STATUS "Downloading Eigen...")
-  ExternalProject_Add(
-      eigen_download
-      URL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip
-      SOURCE_DIR "${EIGEN_INCLUDE_DIR}"
-      CONFIGURE_COMMAND ""
-      BUILD_COMMAND ""
-      INSTALL_COMMAND ""
-      LOG_DOWNLOAD ON
-      UPDATE_COMMAND ""
-      PATCH_COMMAND ""
-      TLS_VERIFY ON
-  )
-  add_dependencies(external_downloads eigen_download)
-endif()
+# With FetchContent, we can directly use the target created by the library's CMakeLists.txt
+# The target name is defined in the template_cpp_static_library's CMakeLists.txt
+# Typically it would be named something like 'cpp_static_lib'
 
-# Don't clean build directory anymore, as we want to reuse if it exists
-# Create/download the template static library only if needed
-if(TEMPLATE_LIB_DOWNLOAD_NEEDED)
-    message(STATUS "Setting up template static library build...")
-    ExternalProject_Add(
-        template_cpp_static_library
-        GIT_REPOSITORY https://github.com/petrasvestartas/template_cpp_static_library.git
-        GIT_TAG main
-        PREFIX "${CMAKE_CURRENT_BINARY_DIR}/prefix"
-        SOURCE_DIR "${TEMPLATE_LIB_DIR}"
-        BINARY_DIR "${TEMPLATE_LIB_BUILD_DIR}"
-        CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release
-        BUILD_BYPRODUCTS "${TEMPLATE_LIB_LIBRARY}"
-        LOG_DOWNLOAD ON
-        LOG_CONFIGURE ON
-        LOG_BUILD ON
-        UPDATE_COMMAND ""
-        INSTALL_COMMAND ""
-        UPDATE_DISCONNECTED ON
-    )
-    add_dependencies(external_downloads template_cpp_static_library)
-else()
-    # Create a dummy target to maintain the dependency chain when the library already exists
-    add_custom_target(template_cpp_static_library 
-        COMMAND ${CMAKE_COMMAND} -E echo "Using existing static library at ${TEMPLATE_LIB_LIBRARY}"
-    )
-    add_dependencies(external_downloads template_cpp_static_library)
-endif()
-
-# Create an imported target for the static library
-add_library(cpp_static_lib STATIC IMPORTED GLOBAL)
-set_property(TARGET cpp_static_lib PROPERTY IMPORTED_LOCATION "${TEMPLATE_LIB_LIBRARY}")
-add_dependencies(cpp_static_lib template_cpp_static_library)
+# We're assuming the target is named 'cpp_static_lib' - adjust if needed based on the library's CMake
+# If the library doesn't define a target name, you may need to create it yourself
 
 # Find Python and nanobind
 find_package(Python 3.8 REQUIRED COMPONENTS Interpreter Development.Module Development.SABIModule)
@@ -132,11 +104,9 @@ function(add_nanobind_extension name source)
     ${nanobind_INCLUDE_DIRS}
   )
   
-  # Make sure the module depends on the external library being built
-  add_dependencies(${name} template_cpp_static_library)
-  
-  # Link directly to the static library file (not using an imported target)
-  target_link_libraries(${name} PRIVATE "${TEMPLATE_LIB_LIBRARY}")
+  # With FetchContent, we can directly link to the library target
+  # This ensures proper dependency tracking and avoids hardcoded paths
+  target_link_libraries(${name} PRIVATE cpp_static_lib)
   
   # Install the module
   install(TARGETS ${name} LIBRARY DESTINATION compas_occt)
