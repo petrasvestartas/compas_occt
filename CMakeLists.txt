@@ -211,6 +211,20 @@ if(OCCT_DOWNLOAD_NEEDED)
     message(STATUS "Building OCCT for macOS architectures: ${CMAKE_OSX_ARCHITECTURES}")
   endif()
   
+  # Windows-specific settings to improve build reliability
+  if(WIN32)
+    list(APPEND OCCT_CMAKE_ARGS
+      # Use Ninja generator instead of Visual Studio for OCCT (more reliable)
+      "-G" "Ninja"
+      # Disable some problematic OCCT modules that often cause Windows build issues
+      "-DBUILD_MODULE_VISUALIZATION=OFF"
+      "-DBUILD_MODULE_MODELING=ON"
+      "-DBUILD_MODULE_OCAF=OFF"
+      "-DINSTALL_FREETYPE=OFF"
+    )
+    message(STATUS "Using Windows-specific OCCT build settings")
+  endif()
+  
   ExternalProject_Add(
     occt_external
     URL https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V7_9_0.zip

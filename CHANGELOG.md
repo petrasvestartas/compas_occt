@@ -46,6 +46,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+## [0.1.7] 2025-05-18
+
+### Added
+
+### Changed
+
+- Ninja generator for windows, disables modules, add clear build status messages.
+
+### Removed
+
+## [0.1.6] 2025-05-18
+
+### Added
+
+### Changed
+
+- WIP
+
+### Removed
+
+## [0.1.5] 2025-05-18
+
+### Added
+
+### Changed
+
+- WIP
+
+### Removed
+
 
 ## [0.1.4] 2025-05-18
 
