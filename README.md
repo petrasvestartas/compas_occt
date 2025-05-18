@@ -18,6 +18,12 @@ cd compas_occt
 pip install -e ".[dev]"
 ```
 
+If you are a software developer, and this is your own package, then it is usually much more efficient to install the build dependencies in your environment once and use the following command that avoids a costly creation of a new virtual environment at every compilation:
+
+```bash
+pip install --no-build-isolation -ve .
+```
+
 ## Documentation
 
 For further "getting started" instructions, a tutorial, examples, and an API reference,
