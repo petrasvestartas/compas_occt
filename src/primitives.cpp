@@ -1,8 +1,5 @@
 #include "compas.h"
 
-// Include the static library's header
-#include "calculator.h"
-
 // Include OCCT headers for NURBS curves
 #include <TColgp_Array1OfPnt.hxx>
 #include <TColStd_Array1OfReal.hxx>
@@ -15,10 +12,10 @@ int add(int a, int b) {
     return a + b;
 }
 
-// This function uses the static library's implementation
+// Simple addition function
 int sum_from_static_lib(int a, int b) {
-    // Call the function from the static library
-    return math::sum(a, b);
+    // Simple direct implementation
+    return a + b;
 }
 
 // Create a NURBS curve using OCCT
