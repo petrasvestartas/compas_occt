@@ -201,9 +201,12 @@ if(OCCT_DOWNLOAD_NEEDED)
   
   # Add platform-specific arguments
   if(APPLE)
+    # Format the architectures as a semicolon-separated CMake list
+    string(REPLACE ";" "\\;" OCCT_OSX_ARCHS "${CMAKE_OSX_ARCHITECTURES}")
+    
     list(APPEND OCCT_CMAKE_ARGS
-      -DCMAKE_OSX_ARCHITECTURES="${CMAKE_OSX_ARCHITECTURES}"
-      -DCMAKE_OSX_DEPLOYMENT_TARGET="${CMAKE_OSX_DEPLOYMENT_TARGET}"
+      "-DCMAKE_OSX_ARCHITECTURES=${OCCT_OSX_ARCHS}"
+      "-DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}"
     )
     message(STATUS "Building OCCT for macOS architectures: ${CMAKE_OSX_ARCHITECTURES}")
   endif()
