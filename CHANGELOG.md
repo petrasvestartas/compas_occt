@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Revert back github release action to build 3 OS jobs.
+
 ### Removed
 
 
