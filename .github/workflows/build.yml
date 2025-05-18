@@ -14,7 +14,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest] #  ubuntu-latest, macos-latest, windows-latest
+        os: [ubuntu-latest, macos-latest, windows-latest] #  ubuntu-latest, macos-latest, windows-latest
         python: ["3.10"]
 
     steps:
@@ -54,8 +54,8 @@ jobs:
             platform: manylinux
           - os: macos-latest
             platform: mac
-          # - os: windows-latest
-          #   platform: windows
+          - os: windows-latest
+            platform: windows
 
     steps:
       - uses: actions/checkout@v4
