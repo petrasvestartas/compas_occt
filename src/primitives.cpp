@@ -1,21 +1,31 @@
 #include "compas.h"
 
-// Include OCCT headers for NURBS curves
+// OCCT includes
+#include <gp_Pnt.hxx>
 #include <TColgp_Array1OfPnt.hxx>
 #include <TColStd_Array1OfReal.hxx>
 #include <TColStd_Array1OfInteger.hxx>
 #include <Geom_BSplineCurve.hxx>
-#include <gp_Pnt.hxx>
+#include <Standard_Handle.hxx>
+#include <StdFail_NotDone.hxx>
+
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/vector.h>
+
+namespace nb = nanobind;
+using namespace nb::literals;
 
 // Define our own function using regular C++
 int add(int a, int b) {
     return a + b;
 }
 
-// Simple addition function
-int sum_from_static_lib(int a, int b) {
-    // Simple direct implementation
-    return a + b;
+// Simple OCCT function that creates a 3D point
+std::vector<double> create_point(double x, double y, double z) {
+    gp_Pnt point(x, y, z);
+    std::vector<double> coords = {point.X(), point.Y(), point.Z()};
+    return coords;
 }
 
 // Create a NURBS curve using OCCT
@@ -48,6 +58,9 @@ Handle(Geom_BSplineCurve) create_nurbs_curve() {
     return new Geom_BSplineCurve(controlPoints, weights, knots, mults, 3);
 }
 
+// Temporarily commenting out OCCT functions for Windows build
+// Will be uncommented once build system is fixed
+/*
 // Extract points from a NURBS curve for visualization
 nanobind::list sample_nurbs_curve(int num_points) {
     // Create the NURBS curve
@@ -69,6 +82,14 @@ nanobind::list sample_nurbs_curve(int num_points) {
         points.append(point_coords);
     }
     
+    return points;
+}
+*/
+
+// Temporary placeholder for Windows build
+nanobind::list sample_nurbs_curve(int num_points) {
+    // Return an empty list for now
+    nanobind::list points;
     return points;
 }
 
@@ -112,14 +133,14 @@ std::string test_occt_linking() {
 }
 
 NB_MODULE(_primitives, m) {
-    m.doc() = "Primitives example with static library integration and OCCT NURBS.";
+    m.doc() = "Primitives example with OCCT geometry integration.";
 
     // Expose our regular function
     m.def("add", &add, "a"_a, "b"_a=1, "Add two numbers using local implementation");
     
-    // Expose the function that uses the static library
-    m.def("sum_from_static_lib", &sum_from_static_lib, "a"_a, "b"_a=1, 
-          "Add two numbers using the template static library implementation");
+    // Expose OCCT point creation function
+    m.def("create_point", &create_point, "x"_a, "y"_a, "z"_a, 
+          "Create a 3D point with OCCT and return its coordinates as [x,y,z]");
     
     // Expose the OCCT NURBS curve function
     m.def("sample_nurbs_curve", &sample_nurbs_curve, "num_points"_a=50,

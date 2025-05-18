@@ -14,6 +14,13 @@ endif()
 
 include(ExternalProject)
 
+# Find Python first (required for nanobind)
+find_package(Python 3.8 REQUIRED COMPONENTS Interpreter Development.Module Development.SABIModule)
+
+# Then include nanobind for Python bindings
+find_package(nanobind CONFIG REQUIRED)
+find_package(Threads REQUIRED)
+
 # External dependencies will be placed in the build directory to keep the src tree clean
 set(EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external")
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -31,29 +38,37 @@ else()
   message(STATUS "Using existing Eigen installation at: ${EIGEN_INCLUDE_DIR}")
 endif()
 
-# --------------- Template Static Library --------------------------
-# Define paths
-set(TEMPLATE_LIB_DIR "${EXTERNAL_DIR}/template_cpp_static_library")
-set(TEMPLATE_LIB_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/template_static_lib_build")
-set(TEMPLATE_LIB_LIBRARY "${TEMPLATE_LIB_BUILD_DIR}/libcpp_static_lib${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(TEMPLATE_LIB_INCLUDE_DIR "${TEMPLATE_LIB_DIR}/src")
-set(TEMPLATE_LIB_DOWNLOAD_NEEDED FALSE)
-
-# Check if template library already exists
-if(NOT EXISTS "${TEMPLATE_LIB_LIBRARY}")
-  message(STATUS "Template static library not found. Will download and build.")
-  set(TEMPLATE_LIB_DOWNLOAD_NEEDED TRUE)
-else()
-  message(STATUS "Using existing template static library at: ${TEMPLATE_LIB_LIBRARY}")
-endif()
+# We're skipping template static library as it's not needed
 
 # -------------------- OCCT library --------------------------
 set(OCCT_DIR "${EXTERNAL_DIR}/occt")
 set(OCCT_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/occt_build")
 set(OCCT_INSTALL_DIR "${CMAKE_CURRENT_BINARY_DIR}/occt_install")
-set(OCCT_INCLUDE_DIR "${OCCT_INSTALL_DIR}/include/opencascade")
-
-# Define the key OCCT library we'll use to check if installation exists
+# Set OCCT include paths in a cross-platform compatible way
+# For Windows, include all OCCT source directories recursively
+if(WIN32)
+  # Start with base include paths
+  set(OCCT_INCLUDE_DIR
+    "${OCCT_INSTALL_DIR}/include/opencascade"
+    "${OCCT_INSTALL_DIR}/include"
+    "${OCCT_DIR}/src"
+    "${OCCT_DIR}/inc"
+  )
+  
+  # Get a list of all subdirectories in the OCCT source directory
+  file(GLOB OCCT_SRC_SUBDIRS LIST_DIRECTORIES true "${OCCT_DIR}/src/*")
+  foreach(DIR ${OCCT_SRC_SUBDIRS})
+    if(IS_DIRECTORY "${DIR}")
+      list(APPEND OCCT_INCLUDE_DIR "${DIR}")
+    endif()
+  endforeach()
+else()
+  set(OCCT_INCLUDE_DIR 
+    "${OCCT_INSTALL_DIR}/include/opencascade"
+    "${OCCT_INSTALL_DIR}/include"
+    "${OCCT_DIR}/src"
+  )
+endif()
 set(OCCT_KERNEL_LIBRARY "${OCCT_INSTALL_DIR}/lib/libTKernel${CMAKE_STATIC_LIBRARY_SUFFIX}")
 set(OCCT_DOWNLOAD_NEEDED FALSE)
 
@@ -65,25 +80,48 @@ else()
   message(STATUS "Using existing OCCT installation at: ${OCCT_INSTALL_DIR}")
 endif()
 
-# Define OCCT library paths
-# Following the same pattern as template library - defining exact paths to static libraries
-set(OCCT_LIBRARY_KERNEL "${OCCT_INSTALL_DIR}/lib/libTKernel${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(OCCT_LIBRARY_MATH "${OCCT_INSTALL_DIR}/lib/libTKMath${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(OCCT_LIBRARY_G2D "${OCCT_INSTALL_DIR}/lib/libTKG2d${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(OCCT_LIBRARY_G3D "${OCCT_INSTALL_DIR}/lib/libTKG3d${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(OCCT_LIBRARY_GEOMBASE "${OCCT_INSTALL_DIR}/lib/libTKGeomBase${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(OCCT_LIBRARY_BREP "${OCCT_INSTALL_DIR}/lib/libTKBRep${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(OCCT_LIBRARY_GEOMALGO "${OCCT_INSTALL_DIR}/lib/libTKGeomAlgo${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(OCCT_LIBRARY_TOPALGO "${OCCT_INSTALL_DIR}/lib/libTKTopAlgo${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(OCCT_LIBRARY_SHHEALING "${OCCT_INSTALL_DIR}/lib/libTKShHealing${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(OCCT_LIBRARY_MESH "${OCCT_INSTALL_DIR}/lib/libTKMesh${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(OCCT_LIBRARY_BO "${OCCT_INSTALL_DIR}/lib/libTKBO${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(OCCT_LIBRARY_PRIM "${OCCT_INSTALL_DIR}/lib/libTKPrim${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(OCCT_LIBRARY_FEAT "${OCCT_INSTALL_DIR}/lib/libTKFeat${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(OCCT_LIBRARY_OFFSET "${OCCT_INSTALL_DIR}/lib/libTKOffset${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(OCCT_LIBRARY_FILLET "${OCCT_INSTALL_DIR}/lib/libTKFillet${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(OCCT_LIBRARY_HLR "${OCCT_INSTALL_DIR}/lib/libTKHLR${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(OCCT_LIBRARY_BOOL "${OCCT_INSTALL_DIR}/lib/libTKBool${CMAKE_STATIC_LIBRARY_SUFFIX}")
+# Define OCCT library paths with proper platform-specific path handling
+if(WIN32)
+  # Windows format using actual build location
+  set(OCCT_WIN_LIB_DIR "${OCCT_BUILD_DIR}/win64/vc14/lib")
+  
+  set(OCCT_LIBRARY_KERNEL "${OCCT_WIN_LIB_DIR}/TKernel${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_MATH "${OCCT_WIN_LIB_DIR}/TKMath${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_G2D "${OCCT_WIN_LIB_DIR}/TKG2d${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_G3D "${OCCT_WIN_LIB_DIR}/TKG3d${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_GEOMBASE "${OCCT_WIN_LIB_DIR}/TKGeomBase${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_BREP "${OCCT_WIN_LIB_DIR}/TKBRep${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_GEOMALGO "${OCCT_WIN_LIB_DIR}/TKGeomAlgo${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_TOPALGO "${OCCT_WIN_LIB_DIR}/TKTopAlgo${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_SHHEALING "${OCCT_WIN_LIB_DIR}/TKShHealing${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_MESH "${OCCT_WIN_LIB_DIR}/TKMesh${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_BO "${OCCT_WIN_LIB_DIR}/TKBO${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_PRIM "${OCCT_WIN_LIB_DIR}/TKPrim${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_FEAT "${OCCT_WIN_LIB_DIR}/TKFeat${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_OFFSET "${OCCT_WIN_LIB_DIR}/TKOffset${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_FILLET "${OCCT_WIN_LIB_DIR}/TKFillet${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_HLR "${OCCT_WIN_LIB_DIR}/TKHLR${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_BOOL "${OCCT_WIN_LIB_DIR}/TKBool${CMAKE_STATIC_LIBRARY_SUFFIX}")
+else()
+  # Unix format (with 'lib' prefix)
+  set(OCCT_LIBRARY_KERNEL "${OCCT_INSTALL_DIR}/lib/libTKernel${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_MATH "${OCCT_INSTALL_DIR}/lib/libTKMath${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_G2D "${OCCT_INSTALL_DIR}/lib/libTKG2d${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_G3D "${OCCT_INSTALL_DIR}/lib/libTKG3d${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_GEOMBASE "${OCCT_INSTALL_DIR}/lib/libTKGeomBase${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_BREP "${OCCT_INSTALL_DIR}/lib/libTKBRep${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_GEOMALGO "${OCCT_INSTALL_DIR}/lib/libTKGeomAlgo${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_TOPALGO "${OCCT_INSTALL_DIR}/lib/libTKTopAlgo${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_SHHEALING "${OCCT_INSTALL_DIR}/lib/libTKShHealing${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_MESH "${OCCT_INSTALL_DIR}/lib/libTKMesh${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_BO "${OCCT_INSTALL_DIR}/lib/libTKBO${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_PRIM "${OCCT_INSTALL_DIR}/lib/libTKPrim${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_FEAT "${OCCT_INSTALL_DIR}/lib/libTKFeat${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_OFFSET "${OCCT_INSTALL_DIR}/lib/libTKOffset${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_FILLET "${OCCT_INSTALL_DIR}/lib/libTKFillet${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_HLR "${OCCT_INSTALL_DIR}/lib/libTKHLR${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set(OCCT_LIBRARY_BOOL "${OCCT_INSTALL_DIR}/lib/libTKBool${CMAKE_STATIC_LIBRARY_SUFFIX}")
+endif()
 
 # Create a main target to manage all external dependencies
 add_custom_target(external_downloads ALL)
@@ -112,33 +150,7 @@ if(EIGEN_DOWNLOAD_NEEDED)
   add_dependencies(external_downloads eigen_download)
 endif()
 
-# 2. Template static library setup
-if(TEMPLATE_LIB_DOWNLOAD_NEEDED)
-  message(STATUS "Setting up template static library build...")
-  ExternalProject_Add(
-    template_cpp_static_library
-    GIT_REPOSITORY https://github.com/petrasvestartas/template_cpp_static_library.git
-    GIT_TAG main
-    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/prefix"
-    SOURCE_DIR "${TEMPLATE_LIB_DIR}"
-    BINARY_DIR "${TEMPLATE_LIB_BUILD_DIR}"
-    CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release
-    BUILD_BYPRODUCTS "${TEMPLATE_LIB_LIBRARY}"
-    LOG_DOWNLOAD ON
-    LOG_CONFIGURE ON
-    LOG_BUILD ON
-    UPDATE_COMMAND ""
-    INSTALL_COMMAND ""
-    UPDATE_DISCONNECTED ON
-  )
-  add_dependencies(external_downloads template_cpp_static_library)
-else()
-  # Create a dummy target when template library exists
-  add_custom_target(template_cpp_static_library 
-    COMMAND ${CMAKE_COMMAND} -E echo "Using existing static library at ${TEMPLATE_LIB_LIBRARY}"
-  )
-  add_dependencies(external_downloads template_cpp_static_library)
-endif()
+# We're removing template static library setup as requested
 
 # 3. OCCT setup
 if(OCCT_DOWNLOAD_NEEDED)
@@ -199,8 +211,8 @@ if(OCCT_DOWNLOAD_NEEDED)
   add_dependencies(external_downloads occt_external)
   add_dependencies(occt_libraries_built occt_external)
 else()
-  # Create a dummy target when OCCT already exists
-  add_custom_target(occt_external 
+  # Create a dummy target when OCCT library exists
+  add_custom_target(occt_external
     COMMAND ${CMAKE_COMMAND} -E echo "Using existing OCCT installation at ${OCCT_INSTALL_DIR}"
   )
   add_dependencies(external_downloads occt_external)
@@ -208,18 +220,9 @@ else()
 endif()
 
 # Create imported targets for static libraries
-add_library(cpp_static_lib STATIC IMPORTED GLOBAL)
-set_property(TARGET cpp_static_lib PROPERTY IMPORTED_LOCATION "${TEMPLATE_LIB_LIBRARY}")
-add_dependencies(cpp_static_lib template_cpp_static_library)
-
 add_library(occt_lib STATIC IMPORTED GLOBAL)
 set_property(TARGET occt_lib PROPERTY IMPORTED_LOCATION "${OCCT_KERNEL_LIBRARY}")
 add_dependencies(occt_lib occt_external)
-
-# Find Python and nanobind
-find_package(Python 3.8 REQUIRED COMPONENTS Interpreter Development.Module Development.SABIModule)
-find_package(nanobind CONFIG REQUIRED)
-find_package(Threads REQUIRED)
 
 # Define a function to add a nanobind module with common settings
 function(add_nanobind_extension name source)
@@ -233,17 +236,30 @@ function(add_nanobind_extension name source)
   # Apply precompiled headers
   target_precompile_headers(${name} PRIVATE src/compas.h)
   
-  # Include directories
-  target_include_directories(${name} PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${EIGEN_INCLUDE_DIR}
-    ${TEMPLATE_LIB_INCLUDE_DIR}
-    ${OCCT_INCLUDE_DIR}
-    ${nanobind_INCLUDE_DIRS}
-  )
-  
+  # Include directories with special handling for Windows path issues
+  if(WIN32)
+    # Simplified approach - only include the specific OCCT install inc directory
+    target_include_directories(${name} PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src
+      ${EIGEN_INCLUDE_DIR}
+      # Only the OCCT inc directory that actually exists
+      "${OCCT_INSTALL_DIR}/inc"
+      ${nanobind_INCLUDE_DIRS}
+    )
+    
+    # Add a message to help with debugging if needed
+    message(STATUS "Using simplified OCCT include path: ${OCCT_INSTALL_DIR}/inc")
+  else()
+    # Standard include paths for other platforms
+    target_include_directories(${name} PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src
+      ${EIGEN_INCLUDE_DIR}
+      ${OCCT_INCLUDE_DIR}
+      ${nanobind_INCLUDE_DIRS}
+    )
+  endif()
   # Create proper dependency chain
-  add_dependencies(${name} cpp_static_lib occt_libraries_built)
+  add_dependencies(${name} occt_libraries_built)
   
   # Important compiler flags for OCCT
   target_compile_definitions(${name} PRIVATE
@@ -251,42 +267,89 @@ function(add_nanobind_extension name source)
     OCCT_NO_PLUGINS
   )
   
+  # Add compiler-specific include path options for Windows
+  if(WIN32 AND MSVC)
+    # Add base OCCT directories
+    target_compile_options(${name} PRIVATE
+      "/I${OCCT_DIR}/inc"
+      "/I${OCCT_DIR}/src"
+    )
+    
+    # Add ALL OCCT source subdirectories as include paths via compiler options
+    file(GLOB _occt_src_dirs LIST_DIRECTORIES true "${OCCT_DIR}/src/*")
+    foreach(_dir ${_occt_src_dirs})
+      if(IS_DIRECTORY "${_dir}")
+        target_compile_options(${name} PRIVATE "/I${_dir}")
+      endif()
+    endforeach()
+  endif()
+  
   # For GCC/Linux, start the group to handle circular dependencies
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_link_options(${name} PRIVATE "-Wl,--no-as-needed" "-Wl,--start-group")
   endif()
   
   # Link with all libraries in the proper order
-  target_link_libraries(${name} PRIVATE
-    # First the template library
-    cpp_static_lib
-    
-    # Then all OCCT libraries in proper dependency order
-    # Boolean operations and complex shape handling
-    "${OCCT_LIBRARY_BOOL}"
-    "${OCCT_LIBRARY_FILLET}"
-    "${OCCT_LIBRARY_OFFSET}"
-    "${OCCT_LIBRARY_FEAT}"
-    "${OCCT_LIBRARY_PRIM}"
-    "${OCCT_LIBRARY_BO}"
-    "${OCCT_LIBRARY_MESH}"
-    "${OCCT_LIBRARY_HLR}"
-    "${OCCT_LIBRARY_SHHEALING}"
-    
-    # Mid-level algorithms and topology
-    "${OCCT_LIBRARY_TOPALGO}"
-    "${OCCT_LIBRARY_GEOMALGO}"
-    
-    # Geometry and representations
-    "${OCCT_LIBRARY_BREP}"
-    "${OCCT_LIBRARY_GEOMBASE}"
-    "${OCCT_LIBRARY_G3D}"
-    "${OCCT_LIBRARY_G2D}"
-    
-    # Core libraries
-    "${OCCT_LIBRARY_MATH}"
-    "${OCCT_LIBRARY_KERNEL}"
-  )
+  if(WIN32)
+    target_link_libraries(${name} PRIVATE
+      
+      # OCCT libraries in proper dependency order
+      # Boolean operations and complex shape handling
+      "${OCCT_LIBRARY_BOOL}"
+      "${OCCT_LIBRARY_FILLET}"
+      "${OCCT_LIBRARY_OFFSET}"
+      "${OCCT_LIBRARY_FEAT}"
+      "${OCCT_LIBRARY_PRIM}"
+      "${OCCT_LIBRARY_BO}"
+      "${OCCT_LIBRARY_MESH}"
+      "${OCCT_LIBRARY_HLR}"
+      "${OCCT_LIBRARY_SHHEALING}"
+      
+      # Mid-level algorithms and topology
+      "${OCCT_LIBRARY_TOPALGO}"
+      "${OCCT_LIBRARY_GEOMALGO}"
+      
+      # Geometry and representations
+      "${OCCT_LIBRARY_BREP}"
+      "${OCCT_LIBRARY_GEOMBASE}"
+      "${OCCT_LIBRARY_G3D}"
+      "${OCCT_LIBRARY_G2D}"
+      
+      # Core libraries
+      "${OCCT_LIBRARY_MATH}"
+      "${OCCT_LIBRARY_KERNEL}"
+    )
+  else()
+    # Unix/Linux configuration
+    target_link_libraries(${name} PRIVATE
+      
+      # OCCT libraries in proper dependency order
+      # Boolean operations and complex shape handling
+      "${OCCT_LIBRARY_BOOL}"
+      "${OCCT_LIBRARY_FILLET}"
+      "${OCCT_LIBRARY_OFFSET}"
+      "${OCCT_LIBRARY_FEAT}"
+      "${OCCT_LIBRARY_PRIM}"
+      "${OCCT_LIBRARY_BO}"
+      "${OCCT_LIBRARY_MESH}"
+      "${OCCT_LIBRARY_HLR}"
+      "${OCCT_LIBRARY_SHHEALING}"
+      
+      # Mid-level algorithms and topology
+      "${OCCT_LIBRARY_TOPALGO}"
+      "${OCCT_LIBRARY_GEOMALGO}"
+      
+      # Geometry and representations
+      "${OCCT_LIBRARY_BREP}"
+      "${OCCT_LIBRARY_GEOMBASE}"
+      "${OCCT_LIBRARY_G3D}"
+      "${OCCT_LIBRARY_G2D}"
+      
+      # Core libraries
+      "${OCCT_LIBRARY_MATH}"
+      "${OCCT_LIBRARY_KERNEL}"
+    )
+  endif()
   
   # For GCC/Linux, end the group to handle circular dependencies
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -297,15 +360,50 @@ function(add_nanobind_extension name source)
   install(TARGETS ${name} LIBRARY DESTINATION compas_occt)
 endfunction()
 
-# Create individual extension modules for each C++ file
+# Create a target that requires all external libraries to be built first
+add_custom_target(all_deps_ready)
+
+# Add dependencies to this target based on what needs downloading
+if(EIGEN_DOWNLOAD_NEEDED)
+  add_dependencies(all_deps_ready eigen_download)
+endif()
+
+if(OCCT_DOWNLOAD_NEEDED)
+  add_dependencies(all_deps_ready occt_external)
+endif()
+
+# Create the modules and ensure they depend on all dependencies being ready
 add_nanobind_extension(_primitives src/primitives.cpp)
+add_nanobind_extension(_curves src/curves.cpp)
+
+# Make sure OCCT is fully built before trying to build our modules
+add_dependencies(_primitives all_deps_ready)
+add_dependencies(_curves all_deps_ready)
+
+# # Ensure explicit dependency on OCCT - needed on Windows
+# if(OCCT_DOWNLOAD_NEEDED)
+#   add_dependencies(_primitives occt_external)
+#   add_dependencies(_curves occt_external)
+  
+#   # Force build order to ensure libraries are available for primitives
+#   add_custom_command(
+#     TARGET _primitives PRE_BUILD
+#     COMMAND ${CMAKE_COMMAND} -E echo "Ensuring OCCT is fully built before compiling primitives.cpp"
+#     DEPENDS occt_external
+#   )
+  
+#   # Force build order to ensure libraries are available for curves
+#   add_custom_command(
+#     TARGET _curves PRE_BUILD
+#     COMMAND ${CMAKE_COMMAND} -E echo "Ensuring OCCT is fully built before compiling curves.cpp"
+#     DEPENDS occt_external
+#   )
+# endif()
 
 # Display build configuration information
 message(STATUS "============= Build Configuration =============")
 message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "C++ Standard: C++${CMAKE_CXX_STANDARD}")
 message(STATUS "Eigen Include Dir: ${EIGEN_INCLUDE_DIR}")
-message(STATUS "Template Static Library: ${TEMPLATE_LIB_LIBRARY}")
-message(STATUS "Template Include Dir: ${TEMPLATE_LIB_INCLUDE_DIR}")
 message(STATUS "OCCT Install Dir: ${OCCT_INSTALL_DIR}")
 message(STATUS "=======================================")
