@@ -34,9 +34,9 @@ jobs:
           # - os: macos-latest
           #   platform: mac
           - os: macos-13
-            platform: mac
+            platform: mac-intel
           - os: macos-14
-            platform: mac
+            platform: mac-arm
           - os: windows-latest
             platform: windows
 
