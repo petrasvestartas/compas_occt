@@ -81,6 +81,72 @@ std::string test_occt_nurbs() {
     return output.str();
 }
 
+// Function to sample points from the NURBS curve
+nb::list sample_curve_points(int num_points = 50) {
+    // Create a NURBS curve similar to the one in test_occt_nurbs() function
+    // Step 1: Define control points for the NURBS curve
+    const int numPoles = 6;
+    TColgp_Array1OfPnt poles(1, numPoles);
+    
+    // Create a sinusoidal wave shape with the control points
+    poles(1) = gp_Pnt(0, 0, 0);
+    poles(2) = gp_Pnt(10, 20, 0);
+    poles(3) = gp_Pnt(20, -10, 0);
+    poles(4) = gp_Pnt(30, 20, 0);
+    poles(5) = gp_Pnt(40, -10, 0);
+    poles(6) = gp_Pnt(50, 0, 0);
+    
+    // Step 2: Define weights for the NURBS curve
+    TColStd_Array1OfReal weights(1, numPoles);
+    weights(1) = 1.0;
+    weights(2) = 2.0;
+    weights(3) = 0.8;
+    weights(4) = 2.0;
+    weights(5) = 0.8;
+    weights(6) = 1.0;
+    
+    // Step 3: Define knots and multiplicities
+    TColStd_Array1OfReal knots(1, 4);
+    knots(1) = 0.0;
+    knots(2) = 0.25;
+    knots(3) = 0.75;
+    knots(4) = 1.0;
+    
+    TColStd_Array1OfInteger mults(1, 4);
+    mults(1) = 4;
+    mults(2) = 1;
+    mults(3) = 1;
+    mults(4) = 4;
+    
+    // Create the NURBS curve (degree 3)
+    Handle(Geom_BSplineCurve) nurbsCurve = new Geom_BSplineCurve(
+        poles, weights, knots, mults, 3, false);
+    
+    // Sample points along the curve
+    nb::list result;
+    double paramStep = 1.0 / (num_points - 1);
+    
+    for (int i = 0; i < num_points; i++) {
+        double u = i * paramStep;
+        
+        // Ensure we don't exceed parameter bounds (0-1)
+        if (u > 1.0) u = 1.0;
+        
+        gp_Pnt point;
+        nurbsCurve->D0(u, point);
+        
+        // Create a Python list with [x,y,z] coordinates
+        nb::list point_coords;
+        point_coords.append(point.X());
+        point_coords.append(point.Y());
+        point_coords.append(point.Z());
+        
+        result.append(point_coords);
+    }
+    
+    return result;
+}
+
 NB_MODULE(_curves, m) {
     m.doc() = "OCCT curve testing module";
     
@@ -90,4 +156,8 @@ NB_MODULE(_curves, m) {
     m.def("get_occt_version", []() { 
         return std::string(OCC_VERSION_STRING_EXT); 
     }, "Return the OCCT version");
+    
+    // Add the sample_curve_points function with default num_points=50
+    m.def("sample_curve_points", &sample_curve_points, nb::arg("num_points") = 50,
+          "Sample points from a NURBS curve with specified density");
 }
