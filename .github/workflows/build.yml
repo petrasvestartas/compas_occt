@@ -52,7 +52,9 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: manylinux
-          - os: macos-latest
+          - os: macos-13
+            platform: mac
+          - os: macos-14
             platform: mac
           - os: windows-latest
             platform: windows
