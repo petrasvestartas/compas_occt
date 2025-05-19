@@ -168,7 +168,7 @@ docstring-code-line-length = "dynamic"
 # ============================================================================
 
 [tool.bumpversion]
-current_version = "0.1.13"
+current_version = "0.1.14"
 message = "Bump version to {new_version}"
 commit = true
 tag = true
