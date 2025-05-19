@@ -7,26 +7,15 @@ set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ standard to use for the build." FORC
 set(CMAKE_CXX_STANDARD_REQUIRED ON CACHE BOOL "Require the specified C++ standard." FORCE)
 set(CMAKE_CXX_EXTENSIONS OFF CACHE BOOL "Disable compiler-specific extensions." FORCE)
 
-# Configure macOS architecture - build for native architecture only for better compatibility
+# Configure macOS to build universal binaries (both arm64 and x86_64)
 if(APPLE)
-  # Detect host architecture
-  execute_process(
-    COMMAND uname -m
-    OUTPUT_VARIABLE HOST_ARCH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
-  
-  # Set architecture based on host (one or the other, not universal binary)
-  if(HOST_ARCH STREQUAL "arm64")
-    set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "Build architecture for macOS" FORCE)
-    message(STATUS "Building for Apple Silicon (arm64)")
-  else()
-    set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "Build architecture for macOS" FORCE)
-    message(STATUS "Building for Intel Mac (x86_64)")
-  endif()
+  # Always build universal binaries for maximum compatibility
+  set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Build architectures for macOS" FORCE)
   
   # Set minimum macOS version
   set(CMAKE_OSX_DEPLOYMENT_TARGET "11.00" CACHE STRING "Minimum macOS deployment version" FORCE)
+  
+  message(STATUS "Building universal binary for macOS with architectures: ${CMAKE_OSX_ARCHITECTURES}")
 endif()
 
 # For Python compatibility, ensure ABI compatibility with libstdc++
@@ -216,9 +205,12 @@ if(OCCT_DOWNLOAD_NEEDED)
   
   # Add platform-specific arguments
   if(APPLE)
-    # Pass the native architecture flag to OCCT
+    # Format the architectures as a semicolon-separated CMake list
+    string(REPLACE ";" "\\;" OCCT_OSX_ARCHS "${CMAKE_OSX_ARCHITECTURES}")
+    
+    # Force the same architectures for OCCT
     list(APPEND OCCT_CMAKE_ARGS
-      "-DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}"
+      "-DCMAKE_OSX_ARCHITECTURES=${OCCT_OSX_ARCHS}"
       "-DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}"
     )
     
@@ -227,12 +219,9 @@ if(OCCT_DOWNLOAD_NEEDED)
       "-DBUILD_MODULE_Draw=OFF"
       "-DBUILD_DOC_Overview=OFF"
       "-DBUILD_LIBRARY_TYPE=Static"
-      "-DCMAKE_MACOSX_RPATH=ON"
-      "-DCMAKE_BUILD_WITH_INSTALL_RPATH=ON"
-      "-DCMAKE_INSTALL_RPATH_USE_LINK_PATH=ON"
     )
     
-    message(STATUS "Building OCCT for macOS with architecture: ${CMAKE_OSX_ARCHITECTURES}")
+    message(STATUS "Building OCCT universal binary for macOS with archs: ${CMAKE_OSX_ARCHITECTURES}")
   endif()
   
   # Windows-specific settings to improve build reliability
@@ -259,8 +248,6 @@ if(OCCT_DOWNLOAD_NEEDED)
     # Limit to 2 parallel jobs to avoid memory issues
     BUILD_COMMAND ${CMAKE_COMMAND} --build . --config Release -j 2
     INSTALL_COMMAND ${CMAKE_COMMAND} --install . --config Release
-    CMAKE_CACHE_ARGS
-      "-DCMAKE_OSX_ARCHITECTURES:STRING=${CMAKE_OSX_ARCHITECTURES}"
     BUILD_BYPRODUCTS
       "${OCCT_LIBRARY_KERNEL}"
       "${OCCT_LIBRARY_MATH}"
