@@ -99,7 +99,7 @@ build-frontend = "pip"
 manylinux-x86_64-image = "manylinux2014"
 skip = ["*_i686", "*-musllinux_*", "*-win32", "pp*", "cp312-*"]
 macos.environment.MACOSX_DEPLOYMENT_TARGET = "11.00"
-macos.archs = ["x86_64"]
+# macos.archs = ["x86_64"]
 
 # Pre-installation dependencies for wheel building
 before-build = [
