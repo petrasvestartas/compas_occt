@@ -90,9 +90,9 @@ nb::list sample_curve_points(int num_points = 50) {
     
     // Create a sinusoidal wave shape with the control points
     poles(1) = gp_Pnt(0, 0, 0);
-    poles(2) = gp_Pnt(10, 20, 0);
+    poles(2) = gp_Pnt(10, 30, 0);
     poles(3) = gp_Pnt(20, -10, 0);
-    poles(4) = gp_Pnt(30, 20, 0);
+    poles(4) = gp_Pnt(30, 25, 0);
     poles(5) = gp_Pnt(40, -10, 0);
     poles(6) = gp_Pnt(50, 0, 0);
     
