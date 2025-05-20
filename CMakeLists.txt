@@ -193,23 +193,9 @@ function(configure_target_for_occt target_name)
     ${COMMON_INCLUDES}
     ${PLATFORM_INCLUDES}
   )
-  
-  target_compile_definitions(${target_name} PRIVATE
-    HAVE_OCCT HAVE_TKG2d HAVE_TKG3d HAVE_TKGeomBase HAVE_TKBRep
-  )
 
   link_occt_libraries(${target_name})
-  
-  # Handle linking with GCC dependency workarounds
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    # For GCC, use linker groups to handle circular dependencies
-    target_link_options(${target_name} PRIVATE "-Wl,--no-as-needed" "-Wl,--start-group")
-    link_occt_libraries(${target_name})
-    target_link_options(${target_name} PRIVATE "-Wl,--end-group")
-  else()
-    # For other compilers, just link normally
-    link_occt_libraries(${target_name})
-  endif()
+
 endfunction()
 
 # Create a nanobind module with OCCT integration
