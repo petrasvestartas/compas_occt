@@ -70,7 +70,6 @@ add_custom_target(occt_libraries_built COMMENT "Ensuring OCCT libraries are read
 # EXTERNAL DEPENDENCIES
 # =============================================================================
 if(EIGEN_DOWNLOAD_NEEDED)
-  message(STATUS "Downloading Eigen...")
   ExternalProject_Add(eigen_download
     URL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip
     SOURCE_DIR "${EIGEN_INCLUDE_DIR}"
@@ -83,8 +82,6 @@ endif()
 
 # 3. OCCT setup
 if(OCCT_DOWNLOAD_NEEDED)
-
-  # Configure OCCT with memory optimizations
   set(OCCT_CMAKE_ARGS
     # Base settings
     -DCMAKE_INSTALL_PREFIX=${OCCT_INSTALL_DIR}
@@ -186,13 +183,6 @@ function(configure_target_for_occt target_name)
     if(MSVC)
       file(GLOB OCCT_SRC_DIRS LIST_DIRECTORIES true "${OCCT_DIR}/src/*")
       list(APPEND PLATFORM_INCLUDES "${OCCT_DIR}/src" "${OCCT_DIR}/inc" ${OCCT_SRC_DIRS})
-      
-      # Add MSVC include directory options directly
-      foreach(DIR "${OCCT_DIR}/inc" "${OCCT_DIR}/src" ${OCCT_SRC_DIRS})
-        if(IS_DIRECTORY "${DIR}")
-          target_compile_options(${target_name} PRIVATE "/I${DIR}")
-        endif()
-      endforeach()
     endif()
   else()
     set(PLATFORM_INCLUDES "${OCCT_INSTALL_DIR}/include/opencascade" "${OCCT_DIR}/src")
