@@ -89,22 +89,15 @@ set(OCCT_MODULES
 # Helper function to get OCCT library paths
 function(define_occt_library_paths)
   if(WIN32)
-    # Windows format using actual build location
-    set(OCCT_LIB_DIR "${OCCT_BUILD_DIR}/win64/vc14/lib" PARENT_SCOPE)
-    set(OCCT_LIB_PREFIX "" PARENT_SCOPE)
+    set(OCCT_LIB_PATTERN "${OCCT_BUILD_DIR}/win64/vc14/lib/%s${CMAKE_STATIC_LIBRARY_SUFFIX}")
   else()
-    # Unix format (with 'lib' prefix)
-    set(OCCT_LIB_DIR "${OCCT_INSTALL_DIR}/lib" PARENT_SCOPE)
-    set(OCCT_LIB_PREFIX "lib" PARENT_SCOPE)
+    set(OCCT_LIB_PATTERN "${OCCT_INSTALL_DIR}/lib/lib%s${CMAKE_STATIC_LIBRARY_SUFFIX}")
   endif()
   
-  # Define each library variable
+  # Define each library variable using the pattern
   foreach(MODULE ${OCCT_MODULES})
-    if(WIN32)
-      set(OCCT_LIBRARY_${MODULE} "${OCCT_BUILD_DIR}/win64/vc14/lib/${MODULE}${CMAKE_STATIC_LIBRARY_SUFFIX}" PARENT_SCOPE)
-    else()
-      set(OCCT_LIBRARY_${MODULE} "${OCCT_INSTALL_DIR}/lib/lib${MODULE}${CMAKE_STATIC_LIBRARY_SUFFIX}" PARENT_SCOPE)
-    endif()
+    string(REPLACE "%s" "${MODULE}" LIB_PATH "${OCCT_LIB_PATTERN}")
+    set(OCCT_LIBRARY_${MODULE} "${LIB_PATH}" PARENT_SCOPE)
   endforeach()
 endfunction()
 
@@ -147,29 +140,25 @@ endif()
 # 3. OCCT setup
 if(OCCT_DOWNLOAD_NEEDED)
   message(STATUS "Setting up OCCT build...")
-  # Configure OCCT build with minimal required components
+  # Common OCCT cmake args for all platforms
   set(OCCT_CMAKE_ARGS
-    # Basic build settings
+    # Basic settings and memory optimizations
     -DCMAKE_INSTALL_PREFIX=${OCCT_INSTALL_DIR}
     -DCMAKE_BUILD_TYPE=Release
     -DBUILD_LIBRARY_TYPE=Static
-    -DBUILD_USE_PCH=OFF
-    -DBUILD_OPT_PROFILE=Production
+    -DBUILD_USE_PCH=OFF                    # Critical for memory usage
+    -DBUILD_OPT_PROFILE=Production         # Reduces memory consumption
+    -DBUILD_RELEASE_DISABLE_EXCEPTIONS=OFF
     
-    # Disable all optional dependencies
+    # Disable all unnecessary features
     -DUSE_TK=OFF -DUSE_VTK=OFF -DUSE_FREETYPE=OFF -DUSE_OPENGL=OFF
-    
-    # Disable samples and tools
     -DBUILD_SAMPLES_MFC=OFF -DBUILD_SAMPLES_QT=OFF -DBUILD_Inspector=OFF -DINSTALL_SAMPLES=OFF
-    
-    # Disable unneeded modules
     -DBUILD_MODULE_ApplicationFramework=OFF -DBUILD_MODULE_DataExchange=OFF
     -DBUILD_MODULE_Draw=OFF -DBUILD_MODULE_VisualizationTest=OFF -DBUILD_MODULE_Visualization=OFF
   )
   
-  # Add platform-specific settings
+  # Platform-specific args
   if(APPLE)
-    # RPATH settings for better library resolution on macOS
     list(APPEND OCCT_CMAKE_ARGS
       "-DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}"
       "-DCMAKE_MACOSX_RPATH=ON"
@@ -178,40 +167,29 @@ if(OCCT_DOWNLOAD_NEEDED)
       "-DBUILD_DOC_Overview=OFF"
     )
   elseif(WIN32)
-    # Windows-specific settings
     list(APPEND OCCT_CMAKE_ARGS
-      "-G" "Ninja"
-      "-DBUILD_MODULE_MODELING=ON"
-      "-DBUILD_MODULE_OCAF=OFF"
-      "-DINSTALL_FREETYPE=OFF"
+      "-G" "Ninja" "-DBUILD_MODULE_MODELING=ON" "-DBUILD_MODULE_OCAF=OFF" "-DINSTALL_FREETYPE=OFF"
     )
   endif()
   
-  message(STATUS "Configuring OCCT with platform-specific settings")
-  
-  # Create a variable to collect all byproducts
+  # Collect all library byproducts in one line
   set(OCCT_BYPRODUCTS)
   foreach(MODULE ${OCCT_MODULES})
     list(APPEND OCCT_BYPRODUCTS ${OCCT_LIBRARY_${MODULE}})
   endforeach()
   
-  # Configure and build OCCT with reduced memory usage (-j 2 prevents OOM errors with BRepApprox)
+  # Configure and build OCCT (with -j 2 to prevent memory issues with BRepApprox components)
   ExternalProject_Add(occt_external
     URL https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V7_9_0.zip
     PREFIX "${CMAKE_CURRENT_BINARY_DIR}/occt_prefix"
-    SOURCE_DIR "${OCCT_DIR}"
-    BINARY_DIR "${OCCT_BUILD_DIR}"
+    SOURCE_DIR "${OCCT_DIR}" BINARY_DIR "${OCCT_BUILD_DIR}"
     CMAKE_ARGS ${OCCT_CMAKE_ARGS}
     BUILD_COMMAND ${CMAKE_COMMAND} --build . --config Release -j 2
     INSTALL_COMMAND ${CMAKE_COMMAND} --install . --config Release
     CMAKE_CACHE_ARGS "-DCMAKE_OSX_ARCHITECTURES:STRING=${CMAKE_OSX_ARCHITECTURES}"
     BUILD_BYPRODUCTS ${OCCT_BYPRODUCTS}
-    LOG_DOWNLOAD ON
-    LOG_CONFIGURE ON
-    LOG_BUILD ON
-    LOG_INSTALL ON
-    UPDATE_COMMAND ""
-    UPDATE_DISCONNECTED ON
+    LOG_DOWNLOAD ON LOG_CONFIGURE ON LOG_BUILD ON LOG_INSTALL ON
+    UPDATE_COMMAND "" UPDATE_DISCONNECTED ON
   )
   add_dependencies(external_downloads occt_external)
   add_dependencies(occt_libraries_built occt_external)
@@ -286,20 +264,16 @@ function(configure_target_for_occt target_name)
     ${nanobind_INCLUDE_DIRS}
   )
   
-  # Platform-specific includes
+  # Platform-specific includes (simplified)
+  set(PLATFORM_INCLUDES)
   if(WIN32)
-    set(PLATFORM_INCLUDES "${OCCT_INSTALL_DIR}/inc")
-    
+    list(APPEND PLATFORM_INCLUDES "${OCCT_INSTALL_DIR}/inc")
+  
     if(MSVC)
-      # Add OCCT source directories for MSVC
       file(GLOB OCCT_SRC_DIRS LIST_DIRECTORIES true "${OCCT_DIR}/src/*")
-      list(APPEND PLATFORM_INCLUDES
-        "${OCCT_DIR}/src"
-        "${OCCT_DIR}/inc"
-        ${OCCT_SRC_DIRS}
-      )
+      list(APPEND PLATFORM_INCLUDES "${OCCT_DIR}/src" "${OCCT_DIR}/inc" ${OCCT_SRC_DIRS})
       
-      # Add include directories as compiler options for better MSVC compatibility
+      # MSVC-specific compiler options
       foreach(DIR "${OCCT_DIR}/inc" "${OCCT_DIR}/src" ${OCCT_SRC_DIRS})
         if(IS_DIRECTORY "${DIR}")
           target_compile_options(${target_name} PRIVATE "/I${DIR}")
@@ -307,11 +281,9 @@ function(configure_target_for_occt target_name)
       endforeach()
     endif()
   else()
-    # Unix/Linux/macOS include path is simpler
-    set(PLATFORM_INCLUDES
+    list(APPEND PLATFORM_INCLUDES 
       "${OCCT_INSTALL_DIR}/include/opencascade"
-      "${OCCT_DIR}/src"
-    )
+      "${OCCT_DIR}/src")
   endif()
   
   # Apply all include directories
