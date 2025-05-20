@@ -1,3 +1,7 @@
+# =============================================================================
+# SECTION 1: INITIAL SETUP - Basic project configuration and build settings
+# =============================================================================
+
 cmake_minimum_required(VERSION 3.15)
 project(compas_occt LANGUAGES CXX)
 
@@ -57,6 +61,10 @@ if(WIN32)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   endif()
 endif()
+
+# =============================================================================
+# SECTION 2: EXTERNAL DEPENDENCIES CONFIGURATION - Paths and dependency checks
+# =============================================================================
 
 # External dependencies will be placed in the build directory to keep the src tree clean
 set(EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external")
@@ -167,6 +175,10 @@ add_custom_target(external_downloads ALL)
 add_custom_target(occt_libraries_built
   COMMENT "Ensuring OCCT libraries are ready"
 )
+
+# =============================================================================
+# SECTION 3: BUILD TARGETS FOR DEPENDENCIES - ExternalProject setup
+# =============================================================================
 
 # -------------------- Download and build external dependencies --------------------
 # 1. Download Eigen if needed
@@ -302,6 +314,91 @@ add_library(occt_lib STATIC IMPORTED GLOBAL)
 set_property(TARGET occt_lib PROPERTY IMPORTED_LOCATION "${OCCT_KERNEL_LIBRARY}")
 add_dependencies(occt_lib occt_external)
 
+# =============================================================================
+# SECTION 4: NANOBIND MODULE FUNCTION - Platform-specific linking configuration
+# =============================================================================
+
+# Helper macro to link OCCT libraries in the correct order
+macro(link_occt_libraries target_name)
+  target_link_libraries(${target_name} PRIVATE
+    # OCCT libraries in proper dependency order
+    # Boolean operations and complex shape handling
+    "${OCCT_LIBRARY_BOOL}"
+    "${OCCT_LIBRARY_FILLET}"
+    "${OCCT_LIBRARY_OFFSET}"
+    "${OCCT_LIBRARY_FEAT}"
+    "${OCCT_LIBRARY_PRIM}"
+    "${OCCT_LIBRARY_BO}"
+    "${OCCT_LIBRARY_MESH}"
+    "${OCCT_LIBRARY_HLR}"
+    "${OCCT_LIBRARY_SHHEALING}"
+    
+    # Mid-level algorithms and topology
+    "${OCCT_LIBRARY_TOPALGO}"
+    "${OCCT_LIBRARY_GEOMALGO}"
+    
+    # Geometry and representations
+    "${OCCT_LIBRARY_BREP}"
+    "${OCCT_LIBRARY_GEOMBASE}"
+    "${OCCT_LIBRARY_G3D}"
+    "${OCCT_LIBRARY_G2D}"
+    
+    # Core libraries
+    "${OCCT_LIBRARY_MATH}"
+    "${OCCT_LIBRARY_KERNEL}"
+  )
+endmacro()
+
+# Helper macro to set common OCCT compiler definitions
+macro(set_occt_compiler_definitions target_name)
+  target_compile_definitions(${target_name} PRIVATE
+    HAVE_OCCT
+    HAVE_TKG2d
+    HAVE_TKG3d
+    HAVE_TKGeomBase
+    HAVE_TKBRep
+  )
+endmacro()
+
+# Helper macro to set up include directories based on platform
+macro(set_include_directories target_name)
+  # Common include directories for all platforms
+  target_include_directories(${target_name} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${EIGEN_INCLUDE_DIR}
+    ${nanobind_INCLUDE_DIRS}
+  )
+  
+  # Platform-specific OCCT include directory
+  if(WIN32)
+    # Windows uses a different include path structure
+    target_include_directories(${target_name} PRIVATE "${OCCT_INSTALL_DIR}/inc")
+    message(STATUS "Using simplified OCCT include path for ${target_name}: ${OCCT_INSTALL_DIR}/inc")
+  else()
+    # Unix/Linux/macOS path
+    target_include_directories(${target_name} PRIVATE "${OCCT_INSTALL_DIR}/include/opencascade")
+  endif()
+endmacro()
+
+# Helper macro to add Windows-specific compiler options
+macro(add_msvc_compiler_options target_name)
+  if(WIN32 AND MSVC)
+    # Add base OCCT directories via compiler options
+    target_compile_options(${target_name} PRIVATE
+      "/I${OCCT_DIR}/inc"
+      "/I${OCCT_DIR}/src"
+    )
+    
+    # Add ALL OCCT source subdirectories as include paths via compiler options
+    file(GLOB _occt_src_dirs LIST_DIRECTORIES true "${OCCT_DIR}/src/*")
+    foreach(_dir ${_occt_src_dirs})
+      if(IS_DIRECTORY "${_dir}")
+        target_compile_options(${target_name} PRIVATE "/I${_dir}")
+      endif()
+    endforeach()
+  endif()
+endmacro()
+
 # Define a function to add a nanobind module with common settings
 function(add_nanobind_extension name source)
   nanobind_add_module(
@@ -314,175 +411,25 @@ function(add_nanobind_extension name source)
   # Apply precompiled headers
   target_precompile_headers(${name} PRIVATE src/compas.h)
   
-  # Include directories with special handling for Windows path issues
-  if(WIN32)
-    # Simplified approach - only include the specific OCCT install inc directory
-    target_include_directories(${name} PRIVATE
-      ${CMAKE_CURRENT_SOURCE_DIR}/src
-      ${EIGEN_INCLUDE_DIR}
-      # Only the OCCT inc directory that actually exists
-      "${OCCT_INSTALL_DIR}/inc"
-      ${nanobind_INCLUDE_DIRS}
-    )
-    
-    # Add a message to help with debugging if needed
-    message(STATUS "Using simplified OCCT include path: ${OCCT_INSTALL_DIR}/inc")
-  else()
-    # Standard include paths for other platforms
-    target_include_directories(${name} PRIVATE
-      ${CMAKE_CURRENT_SOURCE_DIR}/src
-      ${EIGEN_INCLUDE_DIR}
-      "${OCCT_INSTALL_DIR}/include/opencascade"
-      ${nanobind_INCLUDE_DIRS}
-    )
-  endif()
+  # Set up include directories with platform-specific handling
+  set_include_directories(${name})
   
-  # Link against the appropriate OCCT libraries for each platform
-  if(WIN32)
-    # Windows configuration
-    target_link_libraries(${name} PRIVATE
-      # OCCT libraries in proper dependency order
-      # Boolean operations and complex shape handling
-      "${OCCT_LIBRARY_BOOL}"
-      "${OCCT_LIBRARY_FILLET}"
-      "${OCCT_LIBRARY_OFFSET}"
-      "${OCCT_LIBRARY_FEAT}"
-      "${OCCT_LIBRARY_PRIM}"
-      "${OCCT_LIBRARY_BO}"
-      "${OCCT_LIBRARY_MESH}"
-      "${OCCT_LIBRARY_HLR}"
-      "${OCCT_LIBRARY_SHHEALING}"
-      
-      # Mid-level algorithms and topology
-      "${OCCT_LIBRARY_TOPALGO}"
-      "${OCCT_LIBRARY_GEOMALGO}"
-      
-      # Geometry and representations
-      "${OCCT_LIBRARY_BREP}"
-      "${OCCT_LIBRARY_GEOMBASE}"
-      "${OCCT_LIBRARY_G3D}"
-      "${OCCT_LIBRARY_G2D}"
-      
-      # Core libraries
-      "${OCCT_LIBRARY_MATH}"
-      "${OCCT_LIBRARY_KERNEL}"
-    )
-  else()
-    # Unix/Linux configuration
-    target_link_libraries(${name} PRIVATE
-      # OCCT libraries in proper dependency order
-      "${OCCT_LIBRARY_BOOL}"
-      "${OCCT_LIBRARY_FILLET}"
-      "${OCCT_LIBRARY_OFFSET}"
-      "${OCCT_LIBRARY_FEAT}"
-      "${OCCT_LIBRARY_PRIM}"
-      "${OCCT_LIBRARY_BO}"
-      "${OCCT_LIBRARY_MESH}"
-      "${OCCT_LIBRARY_HLR}"
-      "${OCCT_LIBRARY_SHHEALING}"
-      "${OCCT_LIBRARY_TOPALGO}"
-      "${OCCT_LIBRARY_GEOMALGO}"
-      "${OCCT_LIBRARY_BREP}"
-      "${OCCT_LIBRARY_GEOMBASE}"
-      "${OCCT_LIBRARY_G3D}"
-      "${OCCT_LIBRARY_G2D}"
-      "${OCCT_LIBRARY_MATH}"
-      "${OCCT_LIBRARY_KERNEL}"
-    )
-  endif()
+  # Link OCCT libraries using our helper macro (works for both Windows and Unix/Linux)
+  link_occt_libraries(${name})
   
-  # Important compiler flags for OCCT
-  target_compile_definitions(${name} PRIVATE
-    HAVE_OCCT
-    HAVE_TKG2d
-    HAVE_TKG3d
-    HAVE_TKGeomBase
-    HAVE_TKBRep
-  )
+  # Add common OCCT compiler definitions
+  set_occt_compiler_definitions(${name})
   
-  # Add compiler-specific include path options for Windows
-  if(WIN32 AND MSVC)
-    # Add base OCCT directories
-    target_compile_options(${name} PRIVATE
-      "/I${OCCT_DIR}/inc"
-      "/I${OCCT_DIR}/src"
-    )
-    
-    # Add ALL OCCT source subdirectories as include paths via compiler options
-    file(GLOB _occt_src_dirs LIST_DIRECTORIES true "${OCCT_DIR}/src/*")
-    foreach(_dir ${_occt_src_dirs})
-      if(IS_DIRECTORY "${_dir}")
-        target_compile_options(${name} PRIVATE "/I${_dir}")
-      endif()
-    endforeach()
-  endif()
+  # Add Windows-specific compiler options for MSVC
+  add_msvc_compiler_options(${name})
   
   # For GCC/Linux, start the group to handle circular dependencies
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_link_options(${name} PRIVATE "-Wl,--no-as-needed" "-Wl,--start-group")
   endif()
   
-  # Link with all libraries in the proper order
-  if(WIN32)
-    target_link_libraries(${name} PRIVATE
-      
-      # OCCT libraries in proper dependency order
-      # Boolean operations and complex shape handling
-      "${OCCT_LIBRARY_BOOL}"
-      "${OCCT_LIBRARY_FILLET}"
-      "${OCCT_LIBRARY_OFFSET}"
-      "${OCCT_LIBRARY_FEAT}"
-      "${OCCT_LIBRARY_PRIM}"
-      "${OCCT_LIBRARY_BO}"
-      "${OCCT_LIBRARY_MESH}"
-      "${OCCT_LIBRARY_HLR}"
-      "${OCCT_LIBRARY_SHHEALING}"
-      
-      # Mid-level algorithms and topology
-      "${OCCT_LIBRARY_TOPALGO}"
-      "${OCCT_LIBRARY_GEOMALGO}"
-      
-      # Geometry and representations
-      "${OCCT_LIBRARY_BREP}"
-      "${OCCT_LIBRARY_GEOMBASE}"
-      "${OCCT_LIBRARY_G3D}"
-      "${OCCT_LIBRARY_G2D}"
-      
-      # Core libraries
-      "${OCCT_LIBRARY_MATH}"
-      "${OCCT_LIBRARY_KERNEL}"
-    )
-  else()
-    # Unix/Linux configuration
-    target_link_libraries(${name} PRIVATE
-      
-      # OCCT libraries in proper dependency order
-      # Boolean operations and complex shape handling
-      "${OCCT_LIBRARY_BOOL}"
-      "${OCCT_LIBRARY_FILLET}"
-      "${OCCT_LIBRARY_OFFSET}"
-      "${OCCT_LIBRARY_FEAT}"
-      "${OCCT_LIBRARY_PRIM}"
-      "${OCCT_LIBRARY_BO}"
-      "${OCCT_LIBRARY_MESH}"
-      "${OCCT_LIBRARY_HLR}"
-      "${OCCT_LIBRARY_SHHEALING}"
-      
-      # Mid-level algorithms and topology
-      "${OCCT_LIBRARY_TOPALGO}"
-      "${OCCT_LIBRARY_GEOMALGO}"
-      
-      # Geometry and representations
-      "${OCCT_LIBRARY_BREP}"
-      "${OCCT_LIBRARY_GEOMBASE}"
-      "${OCCT_LIBRARY_G3D}"
-      "${OCCT_LIBRARY_G2D}"
-      
-      # Core libraries
-      "${OCCT_LIBRARY_MATH}"
-      "${OCCT_LIBRARY_KERNEL}"
-    )
-  endif()
+  # Link OCCT libraries using our helper macro (works for both Windows and Unix/Linux)
+  link_occt_libraries(${name})
   
   # For GCC/Linux, end the group to handle circular dependencies
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -492,6 +439,10 @@ function(add_nanobind_extension name source)
   # Install the module
   install(TARGETS ${name} LIBRARY DESTINATION compas_occt)
 endfunction()
+
+# =============================================================================
+# SECTION 5: TARGET CREATION - Modules and dependency relationships
+# =============================================================================
 
 # Create a target that requires all external libraries to be built first
 add_custom_target(all_deps_ready)
@@ -513,25 +464,9 @@ add_nanobind_extension(_curves src/curves.cpp)
 add_dependencies(_primitives all_deps_ready)
 add_dependencies(_curves all_deps_ready)
 
-# # Ensure explicit dependency on OCCT - needed on Windows
-# if(OCCT_DOWNLOAD_NEEDED)
-#   add_dependencies(_primitives occt_external)
-#   add_dependencies(_curves occt_external)
-  
-#   # Force build order to ensure libraries are available for primitives
-#   add_custom_command(
-#     TARGET _primitives PRE_BUILD
-#     COMMAND ${CMAKE_COMMAND} -E echo "Ensuring OCCT is fully built before compiling primitives.cpp"
-#     DEPENDS occt_external
-#   )
-  
-#   # Force build order to ensure libraries are available for curves
-#   add_custom_command(
-#     TARGET _curves PRE_BUILD
-#     COMMAND ${CMAKE_COMMAND} -E echo "Ensuring OCCT is fully built before compiling curves.cpp"
-#     DEPENDS occt_external
-#   )
-# endif()
+# =============================================================================
+# SECTION 6: BUILD INFORMATION - Display configuration settings
+# =============================================================================
 
 # Display build configuration information
 message(STATUS "============= Build Configuration =============")
