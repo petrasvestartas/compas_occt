@@ -125,48 +125,51 @@ else()
   message(STATUS "Using existing OCCT installation at: ${OCCT_INSTALL_DIR}")
 endif()
 
-# Define OCCT library paths with proper platform-specific path handling
-if(WIN32)
-  # Windows format using actual build location
-  set(OCCT_WIN_LIB_DIR "${OCCT_BUILD_DIR}/win64/vc14/lib")
+# Define the list of OCCT modules we need
+set(OCCT_MODULES
+  "TKernel"
+  "TKMath"
+  "TKG2d"
+  "TKG3d"
+  "TKGeomBase"
+  "TKBRep"
+  "TKGeomAlgo"
+  "TKTopAlgo"
+  "TKShHealing"
+  "TKMesh"
+  "TKBO"
+  "TKPrim"
+  "TKFeat"
+  "TKOffset"
+  "TKFillet"
+  "TKHLR"
+  "TKBool"
+)
+
+# Helper function to get OCCT library paths
+function(define_occt_library_paths)
+  if(WIN32)
+    # Windows format using actual build location
+    set(OCCT_LIB_DIR "${OCCT_BUILD_DIR}/win64/vc14/lib" PARENT_SCOPE)
+    set(OCCT_LIB_PREFIX "" PARENT_SCOPE)
+  else()
+    # Unix format (with 'lib' prefix)
+    set(OCCT_LIB_DIR "${OCCT_INSTALL_DIR}/lib" PARENT_SCOPE)
+    set(OCCT_LIB_PREFIX "lib" PARENT_SCOPE)
+  endif()
   
-  set(OCCT_LIBRARY_KERNEL "${OCCT_WIN_LIB_DIR}/TKernel${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_MATH "${OCCT_WIN_LIB_DIR}/TKMath${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_G2D "${OCCT_WIN_LIB_DIR}/TKG2d${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_G3D "${OCCT_WIN_LIB_DIR}/TKG3d${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_GEOMBASE "${OCCT_WIN_LIB_DIR}/TKGeomBase${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_BREP "${OCCT_WIN_LIB_DIR}/TKBRep${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_GEOMALGO "${OCCT_WIN_LIB_DIR}/TKGeomAlgo${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_TOPALGO "${OCCT_WIN_LIB_DIR}/TKTopAlgo${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_SHHEALING "${OCCT_WIN_LIB_DIR}/TKShHealing${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_MESH "${OCCT_WIN_LIB_DIR}/TKMesh${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_BO "${OCCT_WIN_LIB_DIR}/TKBO${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_PRIM "${OCCT_WIN_LIB_DIR}/TKPrim${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_FEAT "${OCCT_WIN_LIB_DIR}/TKFeat${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_OFFSET "${OCCT_WIN_LIB_DIR}/TKOffset${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_FILLET "${OCCT_WIN_LIB_DIR}/TKFillet${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_HLR "${OCCT_WIN_LIB_DIR}/TKHLR${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_BOOL "${OCCT_WIN_LIB_DIR}/TKBool${CMAKE_STATIC_LIBRARY_SUFFIX}")
-else()
-  # Unix format (with 'lib' prefix)
-  set(OCCT_LIBRARY_KERNEL "${OCCT_INSTALL_DIR}/lib/libTKernel${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_MATH "${OCCT_INSTALL_DIR}/lib/libTKMath${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_G2D "${OCCT_INSTALL_DIR}/lib/libTKG2d${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_G3D "${OCCT_INSTALL_DIR}/lib/libTKG3d${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_GEOMBASE "${OCCT_INSTALL_DIR}/lib/libTKGeomBase${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_BREP "${OCCT_INSTALL_DIR}/lib/libTKBRep${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_GEOMALGO "${OCCT_INSTALL_DIR}/lib/libTKGeomAlgo${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_TOPALGO "${OCCT_INSTALL_DIR}/lib/libTKTopAlgo${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_SHHEALING "${OCCT_INSTALL_DIR}/lib/libTKShHealing${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_MESH "${OCCT_INSTALL_DIR}/lib/libTKMesh${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_BO "${OCCT_INSTALL_DIR}/lib/libTKBO${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_PRIM "${OCCT_INSTALL_DIR}/lib/libTKPrim${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_FEAT "${OCCT_INSTALL_DIR}/lib/libTKFeat${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_OFFSET "${OCCT_INSTALL_DIR}/lib/libTKOffset${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_FILLET "${OCCT_INSTALL_DIR}/lib/libTKFillet${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_HLR "${OCCT_INSTALL_DIR}/lib/libTKHLR${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(OCCT_LIBRARY_BOOL "${OCCT_INSTALL_DIR}/lib/libTKBool${CMAKE_STATIC_LIBRARY_SUFFIX}")
-endif()
+  # Define each library variable
+  foreach(MODULE ${OCCT_MODULES})
+    if(WIN32)
+      set(OCCT_LIBRARY_${MODULE} "${OCCT_BUILD_DIR}/win64/vc14/lib/${MODULE}${CMAKE_STATIC_LIBRARY_SUFFIX}" PARENT_SCOPE)
+    else()
+      set(OCCT_LIBRARY_${MODULE} "${OCCT_INSTALL_DIR}/lib/lib${MODULE}${CMAKE_STATIC_LIBRARY_SUFFIX}" PARENT_SCOPE)
+    endif()
+  endforeach()
+endfunction()
+
+# Call function to define all library paths
+define_occt_library_paths()
 
 # Create a main target to manage all external dependencies
 add_custom_target(external_downloads ALL)
@@ -274,23 +277,23 @@ if(OCCT_DOWNLOAD_NEEDED)
     CMAKE_CACHE_ARGS
       "-DCMAKE_OSX_ARCHITECTURES:STRING=${CMAKE_OSX_ARCHITECTURES}"
     BUILD_BYPRODUCTS
-      "${OCCT_LIBRARY_KERNEL}"
-      "${OCCT_LIBRARY_MATH}"
-      "${OCCT_LIBRARY_G2D}"
-      "${OCCT_LIBRARY_G3D}"
-      "${OCCT_LIBRARY_GEOMBASE}"
-      "${OCCT_LIBRARY_BREP}"
-      "${OCCT_LIBRARY_GEOMALGO}"
-      "${OCCT_LIBRARY_TOPALGO}"
-      "${OCCT_LIBRARY_SHHEALING}"
-      "${OCCT_LIBRARY_MESH}"
-      "${OCCT_LIBRARY_BO}"
-      "${OCCT_LIBRARY_PRIM}"
-      "${OCCT_LIBRARY_FEAT}"
-      "${OCCT_LIBRARY_OFFSET}"
-      "${OCCT_LIBRARY_FILLET}"
-      "${OCCT_LIBRARY_HLR}"
-      "${OCCT_LIBRARY_BOOL}"
+      ${OCCT_LIBRARY_TKernel}
+      ${OCCT_LIBRARY_TKMath}
+      ${OCCT_LIBRARY_TKG2d}
+      ${OCCT_LIBRARY_TKG3d}
+      ${OCCT_LIBRARY_TKGeomBase}
+      ${OCCT_LIBRARY_TKBRep}
+      ${OCCT_LIBRARY_TKGeomAlgo}
+      ${OCCT_LIBRARY_TKTopAlgo}
+      ${OCCT_LIBRARY_TKShHealing}
+      ${OCCT_LIBRARY_TKMesh}
+      ${OCCT_LIBRARY_TKBO}
+      ${OCCT_LIBRARY_TKPrim}
+      ${OCCT_LIBRARY_TKFeat}
+      ${OCCT_LIBRARY_TKOffset}
+      ${OCCT_LIBRARY_TKFillet}
+      ${OCCT_LIBRARY_TKHLR}
+      ${OCCT_LIBRARY_TKBool}
     LOG_DOWNLOAD ON
     LOG_CONFIGURE ON
     LOG_BUILD ON
@@ -311,7 +314,7 @@ endif()
 
 # Create imported targets for static libraries
 add_library(occt_lib STATIC IMPORTED GLOBAL)
-set_property(TARGET occt_lib PROPERTY IMPORTED_LOCATION "${OCCT_KERNEL_LIBRARY}")
+set_property(TARGET occt_lib PROPERTY IMPORTED_LOCATION "${OCCT_LIBRARY_TKernel}")
 add_dependencies(occt_lib occt_external)
 
 # =============================================================================
@@ -323,29 +326,29 @@ macro(link_occt_libraries target_name)
   target_link_libraries(${target_name} PRIVATE
     # OCCT libraries in proper dependency order
     # Boolean operations and complex shape handling
-    "${OCCT_LIBRARY_BOOL}"
-    "${OCCT_LIBRARY_FILLET}"
-    "${OCCT_LIBRARY_OFFSET}"
-    "${OCCT_LIBRARY_FEAT}"
-    "${OCCT_LIBRARY_PRIM}"
-    "${OCCT_LIBRARY_BO}"
-    "${OCCT_LIBRARY_MESH}"
-    "${OCCT_LIBRARY_HLR}"
-    "${OCCT_LIBRARY_SHHEALING}"
+    "${OCCT_LIBRARY_TKBool}"
+    "${OCCT_LIBRARY_TKFillet}"
+    "${OCCT_LIBRARY_TKOffset}"
+    "${OCCT_LIBRARY_TKFeat}"
+    "${OCCT_LIBRARY_TKPrim}"
+    "${OCCT_LIBRARY_TKBO}"
+    "${OCCT_LIBRARY_TKMesh}"
+    "${OCCT_LIBRARY_TKHLR}"
+    "${OCCT_LIBRARY_TKShHealing}"
     
     # Mid-level algorithms and topology
-    "${OCCT_LIBRARY_TOPALGO}"
-    "${OCCT_LIBRARY_GEOMALGO}"
+    "${OCCT_LIBRARY_TKTopAlgo}"
+    "${OCCT_LIBRARY_TKGeomAlgo}"
     
     # Geometry and representations
-    "${OCCT_LIBRARY_BREP}"
-    "${OCCT_LIBRARY_GEOMBASE}"
-    "${OCCT_LIBRARY_G3D}"
-    "${OCCT_LIBRARY_G2D}"
+    "${OCCT_LIBRARY_TKBRep}"
+    "${OCCT_LIBRARY_TKGeomBase}"
+    "${OCCT_LIBRARY_TKG3d}"
+    "${OCCT_LIBRARY_TKG2d}"
     
     # Core libraries
-    "${OCCT_LIBRARY_MATH}"
-    "${OCCT_LIBRARY_KERNEL}"
+    "${OCCT_LIBRARY_TKMath}"
+    "${OCCT_LIBRARY_TKernel}"
   )
 endmacro()
 
@@ -423,16 +426,9 @@ function(add_nanobind_extension name source)
   # Add Windows-specific compiler options for MSVC
   add_msvc_compiler_options(${name})
   
-  # For GCC/Linux, start the group to handle circular dependencies
+  # For GCC/Linux, wrap the libraries in a linker group to handle circular dependencies
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_link_options(${name} PRIVATE "-Wl,--no-as-needed" "-Wl,--start-group")
-  endif()
-  
-  # Link OCCT libraries using our helper macro (works for both Windows and Unix/Linux)
-  link_occt_libraries(${name})
-  
-  # For GCC/Linux, end the group to handle circular dependencies
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_link_options(${name} PRIVATE "-Wl,--end-group")
   endif()
   
