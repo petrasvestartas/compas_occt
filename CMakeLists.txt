@@ -6,11 +6,6 @@ set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
 set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ standard to use for the build." FORCE)
 set(CMAKE_CXX_STANDARD_REQUIRED ON CACHE BOOL "Require the specified C++ standard." FORCE)
 
-# For Python compatibility on Linux (critical)
-if(CMAKE_COMPILER_IS_GNUCXX)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=0")
-endif()
-
 # Required packages
 include(ExternalProject)
 find_package(Python 3.8 REQUIRED COMPONENTS Interpreter Development.Module Development.SABIModule)
@@ -86,23 +81,19 @@ if(EIGEN_DOWNLOAD_NEEDED)
   add_dependencies(external_downloads eigen_download)
 endif()
 
-# We're removing template static library setup as requested
-
 # 3. OCCT setup
 if(OCCT_DOWNLOAD_NEEDED)
-  message(STATUS "Setting up OCCT build...")
+
   # Configure OCCT with memory optimizations
   set(OCCT_CMAKE_ARGS
     # Base settings
     -DCMAKE_INSTALL_PREFIX=${OCCT_INSTALL_DIR}
     -DCMAKE_BUILD_TYPE=Release
     -DBUILD_LIBRARY_TYPE=Static
-    
     # Important memory optimizations
     -DBUILD_USE_PCH=OFF                    # Critical: prevents OOM errors
     -DBUILD_OPT_PROFILE=Production         # Reduces memory consumption
     -DBUILD_RELEASE_DISABLE_EXCEPTIONS=OFF
-    
     # Disable unnecessary components
     -DUSE_TK=OFF -DUSE_VTK=OFF -DUSE_FREETYPE=OFF -DUSE_OPENGL=OFF
     -DBUILD_SAMPLES_MFC=OFF -DBUILD_SAMPLES_QT=OFF -DBUILD_Inspector=OFF -DINSTALL_SAMPLES=OFF
@@ -180,7 +171,6 @@ function(link_occt_libraries target_name)
     "${OCCT_LIBRARY_TKMath}" "${OCCT_LIBRARY_TKernel}"
   )
 endfunction()
-
 
 function(configure_target_for_occt target_name)
   # Common include directories
