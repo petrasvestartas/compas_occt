@@ -53,6 +53,7 @@ if(NOT OCCT_INCLUDE_DIR OR NOT TKernel_LIB)
                    -DBUILD_SAMPLES_QT=OFF
                    -DBUILD_MODULE_Modeling=ON
                    -DBUILD_USE_PCH=OFF
+        # Limit parallel builds to prevent memory issues, especially with BRepApprox
         BUILD_COMMAND ${CMAKE_COMMAND} --build . --config Release -j2
         INSTALL_COMMAND ${CMAKE_COMMAND} --install . --config Release
     )
