@@ -1,6 +1,3 @@
-# =============================================================================
-# BASIC PROJECT SETUP
-# =============================================================================
 cmake_minimum_required(VERSION 3.15)
 project(compas_occt LANGUAGES CXX)
 
@@ -9,15 +6,8 @@ set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
 set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ standard to use for the build." FORCE)
 set(CMAKE_CXX_STANDARD_REQUIRED ON CACHE BOOL "Require the specified C++ standard." FORCE)
 
-# Platform-specific configurations - simplified since cibuildwheels handles architectures separately
-if(APPLE)
-  # Set minimum macOS version - architecture is now determined by the build environment
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "11.00" CACHE STRING "Minimum macOS deployment version" FORCE)
-elseif(WIN32)
-  # Windows-specific definitions
-  add_definitions(-D_WIN32_WINNT=0x0601 -D_CRT_SECURE_NO_WARNINGS)
-elseif(CMAKE_COMPILER_IS_GNUCXX)
-  # For Python compatibility on Linux
+# For Python compatibility on Linux (critical)
+if(CMAKE_COMPILER_IS_GNUCXX)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=0")
 endif()
 
@@ -33,27 +23,13 @@ find_package(Threads REQUIRED)
 
 # Configure paths
 set(EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external")
-
-# Set up external libraries with simplified dependency checks
 set(EIGEN_INCLUDE_DIR "${EXTERNAL_DIR}/eigen")
 set(EIGEN_DOWNLOAD_NEEDED NOT EXISTS "${EIGEN_INCLUDE_DIR}/Eigen/Core")
-if(EIGEN_DOWNLOAD_NEEDED)
-  message(STATUS "Eigen headers not found. Will download.")
-else()
-  message(STATUS "Using existing Eigen installation at: ${EIGEN_INCLUDE_DIR}")
-endif()
-
-# OCCT library paths
 set(OCCT_DIR "${EXTERNAL_DIR}/occt")
 set(OCCT_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/occt_build")
 set(OCCT_INSTALL_DIR "${CMAKE_CURRENT_BINARY_DIR}/occt_install")
 set(OCCT_KERNEL_LIBRARY "${OCCT_INSTALL_DIR}/lib/libTKernel${CMAKE_STATIC_LIBRARY_SUFFIX}")
 set(OCCT_DOWNLOAD_NEEDED NOT EXISTS "${OCCT_KERNEL_LIBRARY}")
-if(OCCT_DOWNLOAD_NEEDED)
-  message(STATUS "OCCT library not found. Will download and build.")
-else()
-  message(STATUS "Using existing OCCT installation at: ${OCCT_INSTALL_DIR}")
-endif()
 
 # Define the list of OCCT modules we need
 set(OCCT_MODULES
@@ -91,16 +67,9 @@ function(define_occt_library_paths)
   endforeach()
 endfunction()
 
-# Call function to define all library paths
-define_occt_library_paths()
-
-# Create a main target to manage all external dependencies
-add_custom_target(external_downloads ALL)
-
-# Create a target to ensure OCCT libraries are ready
-add_custom_target(occt_libraries_built
-  COMMENT "Ensuring OCCT libraries are ready"
-)
+define_occt_library_paths() # Call function to define all library paths
+add_custom_target(external_downloads ALL) # Create a main target to manage all external dependencies
+add_custom_target(occt_libraries_built COMMENT "Ensuring OCCT libraries are ready") # Create a target to ensure OCCT libraries are ready
 
 # =============================================================================
 # EXTERNAL DEPENDENCIES
@@ -202,14 +171,11 @@ function(link_occt_libraries target_name)
     "${OCCT_LIBRARY_TKBool}" "${OCCT_LIBRARY_TKFillet}" "${OCCT_LIBRARY_TKOffset}"
     "${OCCT_LIBRARY_TKFeat}" "${OCCT_LIBRARY_TKPrim}" "${OCCT_LIBRARY_TKBO}"
     "${OCCT_LIBRARY_TKMesh}" "${OCCT_LIBRARY_TKHLR}" "${OCCT_LIBRARY_TKShHealing}"
-    
     # Algorithms
     "${OCCT_LIBRARY_TKTopAlgo}" "${OCCT_LIBRARY_TKGeomAlgo}"
-    
     # Geometry
     "${OCCT_LIBRARY_TKBRep}" "${OCCT_LIBRARY_TKGeomBase}"
     "${OCCT_LIBRARY_TKG3d}" "${OCCT_LIBRARY_TKG2d}"
-    
     # Core
     "${OCCT_LIBRARY_TKMath}" "${OCCT_LIBRARY_TKernel}"
   )
@@ -251,6 +217,8 @@ function(configure_target_for_occt target_name)
   target_compile_definitions(${target_name} PRIVATE
     HAVE_OCCT HAVE_TKG2d HAVE_TKG3d HAVE_TKGeomBase HAVE_TKBRep
   )
+
+  link_occt_libraries(${target_name})
   
   # Handle linking with GCC dependency workarounds
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -263,8 +231,6 @@ function(configure_target_for_occt target_name)
     link_occt_libraries(${target_name})
   endif()
 endfunction()
-
-
 
 # Create a nanobind module with OCCT integration
 function(add_nanobind_extension name)
