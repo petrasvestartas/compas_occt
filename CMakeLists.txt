@@ -10,14 +10,12 @@ set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ standard to use for the build." FORC
 set(CMAKE_CXX_STANDARD_REQUIRED ON CACHE BOOL "Require the specified C++ standard." FORCE)
 set(CMAKE_CXX_EXTENSIONS OFF CACHE BOOL "Disable compiler-specific extensions." FORCE)
 
-# Platform-specific configurations
+# Platform-specific configurations - simplified since cibuildwheels handles architectures separately
 if(APPLE)
-  # Detect and set native architecture for macOS (arm64 or x86_64)
-  execute_process(COMMAND uname -m OUTPUT_VARIABLE HOST_ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
-  set(CMAKE_OSX_ARCHITECTURES "${HOST_ARCH}" CACHE STRING "Build architecture for macOS" FORCE)
+  # Set minimum macOS version - architecture is now determined by the build environment
   set(CMAKE_OSX_DEPLOYMENT_TARGET "11.00" CACHE STRING "Minimum macOS deployment version" FORCE)
-  message(STATUS "Building for macOS with ${HOST_ARCH} architecture")
-elseif(WIN32 AND MSVC)
+  message(STATUS "Building for macOS")
+elseif(WIN32)
   # Windows-specific definitions
   add_definitions(-D_WIN32_WINNT=0x0601 -D_CRT_SECURE_NO_WARNINGS)
 elseif(CMAKE_COMPILER_IS_GNUCXX)
@@ -46,7 +44,7 @@ endif()
 set(EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external")
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-# Eigen (header-only library)
+# Set up external libraries with simplified dependency checks
 set(EIGEN_INCLUDE_DIR "${EXTERNAL_DIR}/eigen")
 set(EIGEN_DOWNLOAD_NEEDED NOT EXISTS "${EIGEN_INCLUDE_DIR}/Eigen/Core")
 if(EIGEN_DOWNLOAD_NEEDED)
@@ -61,11 +59,8 @@ set(OCCT_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/occt_build")
 set(OCCT_INSTALL_DIR "${CMAKE_CURRENT_BINARY_DIR}/occt_install")
 set(OCCT_KERNEL_LIBRARY "${OCCT_INSTALL_DIR}/lib/libTKernel${CMAKE_STATIC_LIBRARY_SUFFIX}")
 set(OCCT_DOWNLOAD_NEEDED NOT EXISTS "${OCCT_KERNEL_LIBRARY}")
-
-# Check if OCCT kernel library exists as indicator for complete installation
-if(NOT EXISTS "${OCCT_KERNEL_LIBRARY}")
+if(OCCT_DOWNLOAD_NEEDED)
   message(STATUS "OCCT library not found. Will download and build.")
-  set(OCCT_DOWNLOAD_NEEDED TRUE)
 else()
   message(STATUS "Using existing OCCT installation at: ${OCCT_INSTALL_DIR}")
 endif()
@@ -152,45 +147,47 @@ endif()
 # 3. OCCT setup
 if(OCCT_DOWNLOAD_NEEDED)
   message(STATUS "Setting up OCCT build...")
-  # Configure OCCT build with minimal required components and platform-specific settings
+  # Configure OCCT build with minimal required components
   set(OCCT_CMAKE_ARGS
-    # Common settings for all platforms
+    # Basic build settings
     -DCMAKE_INSTALL_PREFIX=${OCCT_INSTALL_DIR}
     -DCMAKE_BUILD_TYPE=Release
     -DBUILD_LIBRARY_TYPE=Static
     -DBUILD_USE_PCH=OFF
     -DBUILD_OPT_PROFILE=Production
-    # Disable unneeded components to reduce build size/time
+    
+    # Disable all optional dependencies
     -DUSE_TK=OFF -DUSE_VTK=OFF -DUSE_FREETYPE=OFF -DUSE_OPENGL=OFF
+    
+    # Disable samples and tools
     -DBUILD_SAMPLES_MFC=OFF -DBUILD_SAMPLES_QT=OFF -DBUILD_Inspector=OFF -DINSTALL_SAMPLES=OFF
+    
+    # Disable unneeded modules
     -DBUILD_MODULE_ApplicationFramework=OFF -DBUILD_MODULE_DataExchange=OFF
     -DBUILD_MODULE_Draw=OFF -DBUILD_MODULE_VisualizationTest=OFF -DBUILD_MODULE_Visualization=OFF
   )
   
-  # Add platform-specific arguments
+  # Add platform-specific settings
   if(APPLE)
+    # RPATH settings for better library resolution on macOS
     list(APPEND OCCT_CMAKE_ARGS
-      # macOS architecture and deployment target
-      "-DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}"
       "-DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}"
-      # RPATH settings for better library resolution
       "-DCMAKE_MACOSX_RPATH=ON"
       "-DCMAKE_BUILD_WITH_INSTALL_RPATH=ON"
       "-DCMAKE_INSTALL_RPATH_USE_LINK_PATH=ON"
       "-DBUILD_DOC_Overview=OFF"
     )
-    message(STATUS "Building OCCT for macOS with architecture: ${CMAKE_OSX_ARCHITECTURES}")
   elseif(WIN32)
+    # Windows-specific settings
     list(APPEND OCCT_CMAKE_ARGS
-      # Use Ninja generator instead of Visual Studio for OCCT (more reliable)
       "-G" "Ninja"
-      # Windows-specific module settings
       "-DBUILD_MODULE_MODELING=ON"
       "-DBUILD_MODULE_OCAF=OFF"
       "-DINSTALL_FREETYPE=OFF"
     )
-    message(STATUS "Using Windows-specific OCCT build settings")
   endif()
+  
+  message(STATUS "Configuring OCCT with platform-specific settings")
   
   # Create a variable to collect all byproducts
   set(OCCT_BYPRODUCTS)
@@ -236,11 +233,10 @@ add_dependencies(occt_lib occt_external)
 # SECTION 4: NANOBIND MODULE FUNCTION - Platform-specific linking configuration
 # =============================================================================
 
-# Helper macro to link OCCT libraries in the correct order
-macro(link_occt_libraries target_name)
-  target_link_libraries(${target_name} PRIVATE
-    # OCCT libraries in proper dependency order
-    # Boolean operations and complex shape handling
+# Helper function to link OCCT libraries in the correct order
+function(link_occt_libraries target_name)
+  # Group OCCT libraries by functionality for better organization and dependency management
+  set(OCCT_BOOL_LIBS
     "${OCCT_LIBRARY_TKBool}"
     "${OCCT_LIBRARY_TKFillet}"
     "${OCCT_LIBRARY_TKOffset}"
@@ -250,98 +246,115 @@ macro(link_occt_libraries target_name)
     "${OCCT_LIBRARY_TKMesh}"
     "${OCCT_LIBRARY_TKHLR}"
     "${OCCT_LIBRARY_TKShHealing}"
-    
-    # Mid-level algorithms and topology
+  )
+  
+  set(OCCT_ALGO_LIBS
     "${OCCT_LIBRARY_TKTopAlgo}"
     "${OCCT_LIBRARY_TKGeomAlgo}"
-    
-    # Geometry and representations
+  )
+  
+  set(OCCT_GEOM_LIBS
     "${OCCT_LIBRARY_TKBRep}"
     "${OCCT_LIBRARY_TKGeomBase}"
     "${OCCT_LIBRARY_TKG3d}"
     "${OCCT_LIBRARY_TKG2d}"
-    
-    # Core libraries
+  )
+  
+  set(OCCT_CORE_LIBS
     "${OCCT_LIBRARY_TKMath}"
     "${OCCT_LIBRARY_TKernel}"
   )
-endmacro()
+  
+  # Link everything in the correct order
+  target_link_libraries(${target_name} PRIVATE
+    ${OCCT_BOOL_LIBS}
+    ${OCCT_ALGO_LIBS}
+    ${OCCT_GEOM_LIBS}
+    ${OCCT_CORE_LIBS}
+  )
+endfunction()
 
 # Compiler definitions now incorporated into set_include_directories
 
-# Configure target with appropriate include paths, compiler options and definitions
+# Configure target with appropriate include paths, compiler options and link libraries
 function(configure_target_for_occt target_name)
-  # Common include directories and OCCT definitions
-  target_include_directories(${target_name} PRIVATE
+  # ---- 1. Set up include directories ----
+  # Common include directories for all platforms
+  set(COMMON_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${EIGEN_INCLUDE_DIR}
     ${nanobind_INCLUDE_DIRS}
   )
   
-  target_compile_definitions(${target_name} PRIVATE
-    HAVE_OCCT HAVE_TKG2d HAVE_TKG3d HAVE_TKGeomBase HAVE_TKBRep
-  )
-  
-  # Platform-specific setup
+  # Platform-specific includes
   if(WIN32)
-    # Windows include directories
-    target_include_directories(${target_name} PRIVATE "${OCCT_INSTALL_DIR}/inc")
+    set(PLATFORM_INCLUDES "${OCCT_INSTALL_DIR}/inc")
     
-    # For MSVC, add include directories as compiler options as well
     if(MSVC)
-      # Get all OCCT source directories
-      file(GLOB _occt_src_dirs LIST_DIRECTORIES true "${OCCT_DIR}/src/*")
+      # Add OCCT source directories for MSVC
+      file(GLOB OCCT_SRC_DIRS LIST_DIRECTORIES true "${OCCT_DIR}/src/*")
+      list(APPEND PLATFORM_INCLUDES
+        "${OCCT_DIR}/src"
+        "${OCCT_DIR}/inc"
+        ${OCCT_SRC_DIRS}
+      )
       
-      # Add them as both include directories and compiler options
-      target_include_directories(${target_name} PRIVATE "${OCCT_DIR}/src" "${OCCT_DIR}/inc" ${_occt_src_dirs})
-      target_compile_options(${target_name} PRIVATE "/I${OCCT_DIR}/inc" "/I${OCCT_DIR}/src")
-      
-      foreach(_dir ${_occt_src_dirs})
-        if(IS_DIRECTORY "${_dir}")
-          target_compile_options(${target_name} PRIVATE "/I${_dir}")
+      # Add include directories as compiler options for better MSVC compatibility
+      foreach(DIR "${OCCT_DIR}/inc" "${OCCT_DIR}/src" ${OCCT_SRC_DIRS})
+        if(IS_DIRECTORY "${DIR}")
+          target_compile_options(${target_name} PRIVATE "/I${DIR}")
         endif()
       endforeach()
     endif()
   else()
-    # Unix/Linux/macOS setup is simpler
-    target_include_directories(${target_name} PRIVATE
+    # Unix/Linux/macOS include path is simpler
+    set(PLATFORM_INCLUDES
       "${OCCT_INSTALL_DIR}/include/opencascade"
       "${OCCT_DIR}/src"
     )
   endif()
   
-  # Setup linker options for GCC
+  # Apply all include directories
+  target_include_directories(${target_name} PRIVATE
+    ${COMMON_INCLUDES}
+    ${PLATFORM_INCLUDES}
+  )
+  
+  # ---- 2. Set up compiler definitions ----
+  target_compile_definitions(${target_name} PRIVATE
+    HAVE_OCCT HAVE_TKG2d HAVE_TKG3d HAVE_TKGeomBase HAVE_TKBRep
+  )
+  
+  # ---- 3. Set up linking with proper dependency handling ----
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # For GCC, use linker groups to handle circular dependencies
     target_link_options(${target_name} PRIVATE "-Wl,--no-as-needed" "-Wl,--start-group")
-  endif()
-  
-  # Link OCCT libraries
-  link_occt_libraries(${target_name})
-  
-  # Close linker group if needed
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    link_occt_libraries(${target_name})
     target_link_options(${target_name} PRIVATE "-Wl,--end-group")
+  else()
+    # For other compilers, just link normally
+    link_occt_libraries(${target_name})
   endif()
 endfunction()
 
 # Windows MSVC options now incorporated into set_include_directories
 
-# Define a function to add a nanobind module with common settings
+# Define a unified function to create and configure a nanobind module
 function(add_nanobind_extension name source)
-  # Create the nanobind module
+  # Create the nanobind module with appropriate settings
   nanobind_add_module(${name} STABLE_ABI NB_STATIC ${source})
   
-  # Apply precompiled headers
+  # Apply precompiled headers for better build times
   target_precompile_headers(${name} PRIVATE src/compas.h)
   
-  # Configure all includes, definitions, and linking in one call
+  # Configure includes, definitions, and linking in one call
   configure_target_for_occt(${name})
   
-  # Install the module
-  install(TARGETS ${name} LIBRARY DESTINATION compas_occt)
-  
-  # Add dependency on all_deps_ready to ensure dependencies are built first
+  # Ensure dependencies are built first
   add_dependencies(${name} all_deps_ready)
+  
+  # Install the module to the correct destination
+  install(TARGETS ${name} LIBRARY DESTINATION compas_occt)
 endfunction()
 
 # =============================================================================
