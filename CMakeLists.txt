@@ -103,10 +103,8 @@ add_custom_target(occt_libraries_built
 )
 
 # =============================================================================
-# SECTION 3: EXTERNAL DEPENDENCIES
+# EXTERNAL DEPENDENCIES
 # =============================================================================
-
-# 1. Download Eigen if needed
 if(EIGEN_DOWNLOAD_NEEDED)
   message(STATUS "Downloading Eigen...")
   ExternalProject_Add(eigen_download
@@ -124,17 +122,19 @@ endif()
 # 3. OCCT setup
 if(OCCT_DOWNLOAD_NEEDED)
   message(STATUS "Setting up OCCT build...")
-  # Common OCCT cmake args for all platforms
+  # Configure OCCT with memory optimizations
   set(OCCT_CMAKE_ARGS
-    # Basic settings and memory optimizations
+    # Base settings
     -DCMAKE_INSTALL_PREFIX=${OCCT_INSTALL_DIR}
     -DCMAKE_BUILD_TYPE=Release
     -DBUILD_LIBRARY_TYPE=Static
-    -DBUILD_USE_PCH=OFF                    # Critical for memory usage
+    
+    # Important memory optimizations
+    -DBUILD_USE_PCH=OFF                    # Critical: prevents OOM errors
     -DBUILD_OPT_PROFILE=Production         # Reduces memory consumption
     -DBUILD_RELEASE_DISABLE_EXCEPTIONS=OFF
     
-    # Disable all unnecessary features
+    # Disable unnecessary components
     -DUSE_TK=OFF -DUSE_VTK=OFF -DUSE_FREETYPE=OFF -DUSE_OPENGL=OFF
     -DBUILD_SAMPLES_MFC=OFF -DBUILD_SAMPLES_QT=OFF -DBUILD_Inspector=OFF -DINSTALL_SAMPLES=OFF
     -DBUILD_MODULE_ApplicationFramework=OFF -DBUILD_MODULE_DataExchange=OFF
@@ -162,7 +162,7 @@ if(OCCT_DOWNLOAD_NEEDED)
     list(APPEND OCCT_BYPRODUCTS ${OCCT_LIBRARY_${MODULE}})
   endforeach()
   
-  # Configure and build OCCT (with -j 2 to prevent memory issues with BRepApprox components)
+  # Configure and build OCCT with limit of -j 2 (prevents memory issues with BRepApprox)
   ExternalProject_Add(occt_external
     URL https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V7_9_0.zip
     PREFIX "${CMAKE_CURRENT_BINARY_DIR}/occt_prefix"
@@ -197,28 +197,27 @@ add_dependencies(occt_lib occt_external)
 
 # Link OCCT libraries in dependency order
 function(link_occt_libraries target_name)
-  # Direct list of libraries in the required order
   target_link_libraries(${target_name} PRIVATE
-    # Boolean operations and complex shape handling
+    # Boolean operations
     "${OCCT_LIBRARY_TKBool}" "${OCCT_LIBRARY_TKFillet}" "${OCCT_LIBRARY_TKOffset}"
     "${OCCT_LIBRARY_TKFeat}" "${OCCT_LIBRARY_TKPrim}" "${OCCT_LIBRARY_TKBO}"
     "${OCCT_LIBRARY_TKMesh}" "${OCCT_LIBRARY_TKHLR}" "${OCCT_LIBRARY_TKShHealing}"
-    # Algorithms and topology
+    
+    # Algorithms
     "${OCCT_LIBRARY_TKTopAlgo}" "${OCCT_LIBRARY_TKGeomAlgo}"
+    
     # Geometry
     "${OCCT_LIBRARY_TKBRep}" "${OCCT_LIBRARY_TKGeomBase}"
     "${OCCT_LIBRARY_TKG3d}" "${OCCT_LIBRARY_TKG2d}"
+    
     # Core
     "${OCCT_LIBRARY_TKMath}" "${OCCT_LIBRARY_TKernel}"
   )
 endfunction()
 
-# Compiler definitions now incorporated into set_include_directories
 
-# Configure target with appropriate include paths, compiler options and link libraries
 function(configure_target_for_occt target_name)
-  # ---- 1. Set up include directories ----
-  # Common include directories for all platforms
+  # Common include directories
   set(COMMON_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${EIGEN_INCLUDE_DIR}
@@ -243,18 +242,17 @@ function(configure_target_for_occt target_name)
     set(PLATFORM_INCLUDES "${OCCT_INSTALL_DIR}/include/opencascade" "${OCCT_DIR}/src")
   endif()
   
-  # Apply all include directories
+  # Set include directories
   target_include_directories(${target_name} PRIVATE
     ${COMMON_INCLUDES}
     ${PLATFORM_INCLUDES}
   )
   
-  # ---- 2. Set up compiler definitions ----
   target_compile_definitions(${target_name} PRIVATE
     HAVE_OCCT HAVE_TKG2d HAVE_TKG3d HAVE_TKGeomBase HAVE_TKBRep
   )
   
-  # ---- 3. Set up linking with proper dependency handling ----
+  # Handle linking with GCC dependency workarounds
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # For GCC, use linker groups to handle circular dependencies
     target_link_options(${target_name} PRIVATE "-Wl,--no-as-needed" "-Wl,--start-group")
@@ -266,23 +264,14 @@ function(configure_target_for_occt target_name)
   endif()
 endfunction()
 
-# Windows MSVC options now incorporated into set_include_directories
 
-# Define a unified function to create and configure a nanobind module with OCCT
+
+# Create a nanobind module with OCCT integration
 function(add_nanobind_extension name)
-  # Allow multiple source files using ${ARGN}
   nanobind_add_module(${name} STABLE_ABI NB_STATIC ${ARGN})
-  
-  # Apply precompiled headers
   target_precompile_headers(${name} PRIVATE src/compas.h)
-  
-  # Configure includes, definitions, and linking in one call
   configure_target_for_occt(${name})
-  
-  # Ensure dependencies are built first
   add_dependencies(${name} all_deps_ready)
-  
-  # Install the module to the correct destination
   install(TARGETS ${name} LIBRARY DESTINATION compas_occt)
 endfunction()
 
