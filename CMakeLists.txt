@@ -27,25 +27,7 @@ set(OCCT_KERNEL_LIBRARY "${OCCT_INSTALL_DIR}/lib/libTKernel${CMAKE_STATIC_LIBRAR
 set(OCCT_DOWNLOAD_NEEDED NOT EXISTS "${OCCT_KERNEL_LIBRARY}")
 
 # Define the list of OCCT modules we need
-set(OCCT_MODULES
-  "TKernel"
-  "TKMath"
-  "TKG2d"
-  "TKG3d"
-  "TKGeomBase"
-  "TKBRep"
-  "TKGeomAlgo"
-  "TKTopAlgo"
-  "TKShHealing"
-  "TKMesh"
-  "TKBO"
-  "TKPrim"
-  "TKFeat"
-  "TKOffset"
-  "TKFillet"
-  "TKHLR"
-  "TKBool"
-)
+set(OCCT_MODULES "TKernel" "TKMath" "TKG2d" "TKG3d" "TKGeomBase" "TKBRep" "TKGeomAlgo" "TKTopAlgo" "TKShHealing" "TKMesh" "TKBO" "TKPrim" "TKFeat" "TKOffset" "TKFillet" "TKHLR" "TKBool")
 
 # Helper function to get OCCT library paths
 function(define_occt_library_paths)
@@ -80,7 +62,6 @@ if(EIGEN_DOWNLOAD_NEEDED)
   add_dependencies(external_downloads eigen_download)
 endif()
 
-# 3. OCCT setup
 if(OCCT_DOWNLOAD_NEEDED)
   set(OCCT_CMAKE_ARGS
     # Base settings
@@ -135,18 +116,9 @@ if(OCCT_DOWNLOAD_NEEDED)
   add_dependencies(external_downloads occt_external)
   add_dependencies(occt_libraries_built occt_external)
 else()
-  # Create a dummy target when OCCT library exists
-  add_custom_target(occt_external
-    COMMAND ${CMAKE_COMMAND} -E echo "Using existing OCCT installation at ${OCCT_INSTALL_DIR}"
-  )
+  add_custom_target(occt_external COMMENT "Using existing OCCT at ${OCCT_INSTALL_DIR}")
   add_dependencies(external_downloads occt_external)
-  add_dependencies(occt_libraries_built occt_external)
 endif()
-
-# Create imported targets for static libraries
-add_library(occt_lib STATIC IMPORTED GLOBAL)
-set_property(TARGET occt_lib PROPERTY IMPORTED_LOCATION "${OCCT_LIBRARY_TKernel}")
-add_dependencies(occt_lib occt_external)
 
 # =============================================================================
 # SECTION 4: NANOBIND MODULE FUNCTION - Platform-specific linking configuration
