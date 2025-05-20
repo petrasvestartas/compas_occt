@@ -8,13 +8,11 @@ project(compas_occt LANGUAGES CXX)
 set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
 set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ standard to use for the build." FORCE)
 set(CMAKE_CXX_STANDARD_REQUIRED ON CACHE BOOL "Require the specified C++ standard." FORCE)
-set(CMAKE_CXX_EXTENSIONS OFF CACHE BOOL "Disable compiler-specific extensions." FORCE)
 
 # Platform-specific configurations - simplified since cibuildwheels handles architectures separately
 if(APPLE)
   # Set minimum macOS version - architecture is now determined by the build environment
   set(CMAKE_OSX_DEPLOYMENT_TARGET "11.00" CACHE STRING "Minimum macOS deployment version" FORCE)
-  message(STATUS "Building for macOS")
 elseif(WIN32)
   # Windows-specific definitions
   add_definitions(-D_WIN32_WINNT=0x0601 -D_CRT_SECURE_NO_WARNINGS)
@@ -27,14 +25,7 @@ endif()
 include(ExternalProject)
 find_package(Python 3.8 REQUIRED COMPONENTS Interpreter Development.Module Development.SABIModule)
 find_package(nanobind CONFIG REQUIRED)
-
-# Thread support
-set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads REQUIRED)
-if(NOT Threads_FOUND)
-  message(FATAL_ERROR "Required dependency 'Threads' not found")
-endif()
 
 # =============================================================================
 # EXTERNAL DEPENDENCIES
@@ -42,7 +33,6 @@ endif()
 
 # Configure paths
 set(EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external")
-set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 # Set up external libraries with simplified dependency checks
 set(EIGEN_INCLUDE_DIR "${EXTERNAL_DIR}/eigen")
@@ -113,23 +103,17 @@ add_custom_target(occt_libraries_built
 )
 
 # =============================================================================
-# SECTION 3: BUILD TARGETS FOR DEPENDENCIES - ExternalProject setup
+# SECTION 3: EXTERNAL DEPENDENCIES
 # =============================================================================
 
-# -------------------- Download and build external dependencies --------------------
 # 1. Download Eigen if needed
 if(EIGEN_DOWNLOAD_NEEDED)
   message(STATUS "Downloading Eigen...")
-  ExternalProject_Add(
-    eigen_download
+  ExternalProject_Add(eigen_download
     URL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip
     SOURCE_DIR "${EIGEN_INCLUDE_DIR}"
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND ""
-    INSTALL_COMMAND ""
-    LOG_DOWNLOAD ON
-    UPDATE_COMMAND ""
-    PATCH_COMMAND ""
+    CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND ""
+    LOG_DOWNLOAD ON UPDATE_COMMAND "" PATCH_COMMAND ""
     TLS_VERIFY ON
   )
   add_dependencies(external_downloads eigen_download)
@@ -211,44 +195,21 @@ add_dependencies(occt_lib occt_external)
 # SECTION 4: NANOBIND MODULE FUNCTION - Platform-specific linking configuration
 # =============================================================================
 
-# Helper function to link OCCT libraries in the correct order
+# Link OCCT libraries in dependency order
 function(link_occt_libraries target_name)
-  # Group OCCT libraries by functionality for better organization and dependency management
-  set(OCCT_BOOL_LIBS
-    "${OCCT_LIBRARY_TKBool}"
-    "${OCCT_LIBRARY_TKFillet}"
-    "${OCCT_LIBRARY_TKOffset}"
-    "${OCCT_LIBRARY_TKFeat}"
-    "${OCCT_LIBRARY_TKPrim}"
-    "${OCCT_LIBRARY_TKBO}"
-    "${OCCT_LIBRARY_TKMesh}"
-    "${OCCT_LIBRARY_TKHLR}"
-    "${OCCT_LIBRARY_TKShHealing}"
-  )
-  
-  set(OCCT_ALGO_LIBS
-    "${OCCT_LIBRARY_TKTopAlgo}"
-    "${OCCT_LIBRARY_TKGeomAlgo}"
-  )
-  
-  set(OCCT_GEOM_LIBS
-    "${OCCT_LIBRARY_TKBRep}"
-    "${OCCT_LIBRARY_TKGeomBase}"
-    "${OCCT_LIBRARY_TKG3d}"
-    "${OCCT_LIBRARY_TKG2d}"
-  )
-  
-  set(OCCT_CORE_LIBS
-    "${OCCT_LIBRARY_TKMath}"
-    "${OCCT_LIBRARY_TKernel}"
-  )
-  
-  # Link everything in the correct order
+  # Direct list of libraries in the required order
   target_link_libraries(${target_name} PRIVATE
-    ${OCCT_BOOL_LIBS}
-    ${OCCT_ALGO_LIBS}
-    ${OCCT_GEOM_LIBS}
-    ${OCCT_CORE_LIBS}
+    # Boolean operations and complex shape handling
+    "${OCCT_LIBRARY_TKBool}" "${OCCT_LIBRARY_TKFillet}" "${OCCT_LIBRARY_TKOffset}"
+    "${OCCT_LIBRARY_TKFeat}" "${OCCT_LIBRARY_TKPrim}" "${OCCT_LIBRARY_TKBO}"
+    "${OCCT_LIBRARY_TKMesh}" "${OCCT_LIBRARY_TKHLR}" "${OCCT_LIBRARY_TKShHealing}"
+    # Algorithms and topology
+    "${OCCT_LIBRARY_TKTopAlgo}" "${OCCT_LIBRARY_TKGeomAlgo}"
+    # Geometry
+    "${OCCT_LIBRARY_TKBRep}" "${OCCT_LIBRARY_TKGeomBase}"
+    "${OCCT_LIBRARY_TKG3d}" "${OCCT_LIBRARY_TKG2d}"
+    # Core
+    "${OCCT_LIBRARY_TKMath}" "${OCCT_LIBRARY_TKernel}"
   )
 endfunction()
 
@@ -264,16 +225,14 @@ function(configure_target_for_occt target_name)
     ${nanobind_INCLUDE_DIRS}
   )
   
-  # Platform-specific includes (simplified)
-  set(PLATFORM_INCLUDES)
+  # Platform-specific includes
   if(WIN32)
-    list(APPEND PLATFORM_INCLUDES "${OCCT_INSTALL_DIR}/inc")
-  
+    set(PLATFORM_INCLUDES "${OCCT_INSTALL_DIR}/inc")
     if(MSVC)
       file(GLOB OCCT_SRC_DIRS LIST_DIRECTORIES true "${OCCT_DIR}/src/*")
       list(APPEND PLATFORM_INCLUDES "${OCCT_DIR}/src" "${OCCT_DIR}/inc" ${OCCT_SRC_DIRS})
       
-      # MSVC-specific compiler options
+      # Add MSVC include directory options directly
       foreach(DIR "${OCCT_DIR}/inc" "${OCCT_DIR}/src" ${OCCT_SRC_DIRS})
         if(IS_DIRECTORY "${DIR}")
           target_compile_options(${target_name} PRIVATE "/I${DIR}")
@@ -281,9 +240,7 @@ function(configure_target_for_occt target_name)
       endforeach()
     endif()
   else()
-    list(APPEND PLATFORM_INCLUDES 
-      "${OCCT_INSTALL_DIR}/include/opencascade"
-      "${OCCT_DIR}/src")
+    set(PLATFORM_INCLUDES "${OCCT_INSTALL_DIR}/include/opencascade" "${OCCT_DIR}/src")
   endif()
   
   # Apply all include directories
@@ -311,12 +268,12 @@ endfunction()
 
 # Windows MSVC options now incorporated into set_include_directories
 
-# Define a unified function to create and configure a nanobind module
-function(add_nanobind_extension name source)
-  # Create the nanobind module with appropriate settings
-  nanobind_add_module(${name} STABLE_ABI NB_STATIC ${source})
+# Define a unified function to create and configure a nanobind module with OCCT
+function(add_nanobind_extension name)
+  # Allow multiple source files using ${ARGN}
+  nanobind_add_module(${name} STABLE_ABI NB_STATIC ${ARGN})
   
-  # Apply precompiled headers for better build times
+  # Apply precompiled headers
   target_precompile_headers(${name} PRIVATE src/compas.h)
   
   # Configure includes, definitions, and linking in one call
@@ -330,13 +287,13 @@ function(add_nanobind_extension name source)
 endfunction()
 
 # =============================================================================
-# SECTION 5: TARGET CREATION - Modules and dependency relationships
+# SECTION 5: DEPENDENCY TARGETS
 # =============================================================================
 
-# Create dependency targets
+# Create main dependency target
 add_custom_target(all_deps_ready)
 
-# Process download dependencies
+# Link appropriate dependencies based on what needs to be downloaded
 if(EIGEN_DOWNLOAD_NEEDED)
   add_dependencies(all_deps_ready eigen_download)
 endif()
@@ -344,18 +301,9 @@ if(OCCT_DOWNLOAD_NEEDED)
   add_dependencies(all_deps_ready occt_external)
 endif()
 
-# Create the modules (dependency on all_deps_ready is handled in the function)
+# =============================================================================
+# SECTION 6: PYTHON MODULE TARGETS
+# =============================================================================
+
 add_nanobind_extension(_primitives src/primitives.cpp)
 add_nanobind_extension(_curves src/curves.cpp)
-
-# =============================================================================
-# SECTION 6: BUILD INFORMATION - Display configuration settings
-# =============================================================================
-
-# Display build configuration information
-message(STATUS "============= Build Configuration =============")
-message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "C++ Standard: C++${CMAKE_CXX_STANDARD}")
-message(STATUS "Eigen Include Dir: ${EIGEN_INCLUDE_DIR}")
-message(STATUS "OCCT Install Dir: ${OCCT_INSTALL_DIR}")
-message(STATUS "=======================================")
