@@ -57,26 +57,43 @@ set(OCCT_SRC_DIR ${OCCT_PREFIX}/src/occt)
 set(OCCT_BUILD_DIR ${OCCT_PREFIX}/src/occt-build)
 set(OCCT_INSTALL_DIR ${OCCT_PREFIX}/install)
 
-# List of expected OCCT static libraries
-set(OCCT_LIB_TARGETS
-    ${OCCT_INSTALL_DIR}/lib/libTKBool.a
-    ${OCCT_INSTALL_DIR}/lib/libTKFillet.a
-    ${OCCT_INSTALL_DIR}/lib/libTKOffset.a
-    ${OCCT_INSTALL_DIR}/lib/libTKFeat.a
-    ${OCCT_INSTALL_DIR}/lib/libTKPrim.a
-    ${OCCT_INSTALL_DIR}/lib/libTKBO.a
-    ${OCCT_INSTALL_DIR}/lib/libTKMesh.a
-    ${OCCT_INSTALL_DIR}/lib/libTKHLR.a
-    ${OCCT_INSTALL_DIR}/lib/libTKShHealing.a
-    ${OCCT_INSTALL_DIR}/lib/libTKTopAlgo.a
-    ${OCCT_INSTALL_DIR}/lib/libTKGeomAlgo.a
-    ${OCCT_INSTALL_DIR}/lib/libTKBRep.a
-    ${OCCT_INSTALL_DIR}/lib/libTKGeomBase.a
-    ${OCCT_INSTALL_DIR}/lib/libTKG3d.a
-    ${OCCT_INSTALL_DIR}/lib/libTKG2d.a
-    ${OCCT_INSTALL_DIR}/lib/libTKMath.a
-    ${OCCT_INSTALL_DIR}/lib/libTKernel.a
+# Set platform-specific library prefixes and extensions
+if(WIN32)
+    set(LIB_PREFIX "")
+    set(LIB_EXT ".lib")
+    set(LIB_DIR "win64/lib")
+else()
+    set(LIB_PREFIX "lib")
+    set(LIB_EXT ".a")
+    set(LIB_DIR "lib")
+endif()
+
+# List of OCCT modules
+set(OCCT_MODULES
+    TKBool
+    TKFillet
+    TKOffset
+    TKFeat
+    TKPrim
+    TKBO
+    TKMesh
+    TKHLR
+    TKShHealing
+    TKTopAlgo
+    TKGeomAlgo
+    TKBRep
+    TKGeomBase
+    TKG3d
+    TKG2d
+    TKMath
+    TKernel
 )
+
+# Generate the list of library paths with correct platform-specific naming
+set(OCCT_LIB_TARGETS "")
+foreach(MODULE ${OCCT_MODULES})
+    list(APPEND OCCT_LIB_TARGETS "${OCCT_INSTALL_DIR}/${LIB_DIR}/${LIB_PREFIX}${MODULE}${LIB_EXT}")
+endforeach()
 
 if(NOT OCCT_INCLUDE_DIR OR NOT TKernel_LIB)
     # Build OCCT from source
@@ -124,26 +141,16 @@ else()
     add_custom_target(occt)
     set(OCCT_TARGET occt)
     
-    # Define the library targets for consistency with the build case
-    set(OCCT_LIB_TARGETS
-        ${OCCT_LIB_DIR}/libTKBool.a
-        ${OCCT_LIB_DIR}/libTKFillet.a
-        ${OCCT_LIB_DIR}/libTKOffset.a
-        ${OCCT_LIB_DIR}/libTKFeat.a
-        ${OCCT_LIB_DIR}/libTKPrim.a
-        ${OCCT_LIB_DIR}/libTKBO.a
-        ${OCCT_LIB_DIR}/libTKMesh.a
-        ${OCCT_LIB_DIR}/libTKHLR.a
-        ${OCCT_LIB_DIR}/libTKShHealing.a
-        ${OCCT_LIB_DIR}/libTKTopAlgo.a
-        ${OCCT_LIB_DIR}/libTKGeomAlgo.a
-        ${OCCT_LIB_DIR}/libTKBRep.a
-        ${OCCT_LIB_DIR}/libTKGeomBase.a
-        ${OCCT_LIB_DIR}/libTKG3d.a
-        ${OCCT_LIB_DIR}/libTKG2d.a
-        ${OCCT_LIB_DIR}/libTKMath.a
-        ${TKernel_LIB}
-    )
+    # Create a list of library targets for system-installed OCCT
+    set(OCCT_LIB_TARGETS "")
+    foreach(MODULE ${OCCT_MODULES})
+        # For the last item (TKernel), use the found library path directly
+        if("${MODULE}" STREQUAL "TKernel")
+            list(APPEND OCCT_LIB_TARGETS "${TKernel_LIB}")
+        else()
+            list(APPEND OCCT_LIB_TARGETS "${OCCT_LIB_DIR}/${LIB_PREFIX}${MODULE}${LIB_EXT}")
+        endif()
+    endforeach()
 endif()
 
 # ------------------------------------------------------------------------------
