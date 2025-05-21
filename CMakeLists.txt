@@ -64,13 +64,18 @@ else()
     set(LIB_EXT ".a")
 endif()
 
+# Set platform-specific hardcoded paths for OCCT libraries
 if(NOT OCCT_LIB_DIR)
-    set(SEARCH_PATTERN "${LIB_PREFIX}TKernel${LIB_EXT}")
-    file(GLOB_RECURSE FOUND_LIBS "${OCCT_BUILD_DIR}/${SEARCH_PATTERN}")
-    if (FOUND_LIBS)
-        list(GET FOUND_LIBS 0 FIRST_LIB)
-        get_filename_component(LIB_DIR "${FIRST_LIB}" DIRECTORY)
-        set(OCCT_LIB_DIR "${LIB_DIR}" CACHE PATH "Path to OCCT libraries" FORCE)
+    if(WIN32)
+        set(OCCT_LIB_DIR "${OCCT_BUILD_DIR}/win64/vc14/lib" CACHE PATH "Path to OCCT libraries" FORCE)
+    elseif(APPLE)
+        if(CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+            set(OCCT_LIB_DIR "${OCCT_BUILD_DIR}/mac64/clang/lib" CACHE PATH "Path to OCCT libraries" FORCE)
+        else()
+            set(OCCT_LIB_DIR "${OCCT_BUILD_DIR}/macx86_64/clang/lib" CACHE PATH "Path to OCCT libraries" FORCE) 
+        endif()
+    else() # Linux
+        set(OCCT_LIB_DIR "${OCCT_BUILD_DIR}/lin64/gcc/lib" CACHE PATH "Path to OCCT libraries" FORCE)
     endif()
 endif()
 
@@ -108,10 +113,6 @@ if(NOT OCCT_ALREADY_BUILT)
             -DBUILD_USE_PCH=OFF
         BUILD_COMMAND ${CMAKE_COMMAND} --build . --config Release -j2
         INSTALL_COMMAND ${CMAKE_COMMAND} --install . --config Release --component Development
-        LOG_DOWNLOAD ON
-        LOG_CONFIGURE ON
-        LOG_BUILD ON
-        LOG_INSTALL ON
         BUILD_BYPRODUCTS ${OCCT_LIB_TARGETS}
     )
     
