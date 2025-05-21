@@ -4,111 +4,79 @@ project(compas_occt LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# ------------------------------------------------------------------------------
-# Find Python and nanobind
-# ------------------------------------------------------------------------------
+include(ExternalProject)
 find_package(Python 3.8 REQUIRED COMPONENTS Interpreter Development.Module Development.SABIModule)
-execute_process(COMMAND ${Python_EXECUTABLE} -m nanobind --cmake_dir
-                OUTPUT_VARIABLE nanobind_DIR OUTPUT_STRIP_TRAILING_WHITESPACE)
-find_package(nanobind CONFIG REQUIRED PATHS ${nanobind_DIR})
+find_package(nanobind CONFIG REQUIRED)
 find_package(Threads REQUIRED)
 
-# Setting DOWNLOAD_EXTRACT_TIMESTAMP to suppress newer CMake warnings
-if(POLICY CMP0135)
-    cmake_policy(SET CMP0135 NEW)
-endif()
-
-include(ExternalProject)
-
 # ------------------------------------------------------------------------------
-# Optional: Build Eigen if not found
+# Eigen (header-only library)
 # ------------------------------------------------------------------------------
-find_path(EIGEN_INCLUDE_DIR Eigen/Core)
-if(NOT EIGEN_INCLUDE_DIR)
-    set(EIGEN_DIR ${CMAKE_BINARY_DIR}/eigen-src)
+set(EIGEN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/eigen")
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/external") # Create directories if they don't exist
+add_custom_target(eigen_ext) # Create a target for Eigen tracking
+set(EIGEN_TARGET eigen_ext)
+
+if(NOT EXISTS "${EIGEN_DIR}/Eigen")
     ExternalProject_Add(
-        eigen_ext
+        eigen_download
         URL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip
         PREFIX ${CMAKE_BINARY_DIR}/deps/eigen
         SOURCE_DIR ${EIGEN_DIR}
         CONFIGURE_COMMAND ""
         BUILD_COMMAND ""
         INSTALL_COMMAND ""
-        BUILD_BYPRODUCTS ${EIGEN_DIR}/Eigen/Core
+        TEST_COMMAND ""
     )
-    set(EIGEN_TARGET eigen_ext)
-else()
-    set(EIGEN_DIR ${EIGEN_INCLUDE_DIR})
-    # Create a dummy target to handle dependencies when Eigen is already installed
-    add_custom_target(eigen_ext)
-    set(EIGEN_TARGET eigen_ext)
+    add_dependencies(eigen_ext eigen_download)
 endif()
 
-# ------------------------------------------------------------------------------
-# Optional: Build OCCT if not found
-# ------------------------------------------------------------------------------
-find_path(OCCT_INCLUDE_DIR opencascade/TKernel.hxx)
-find_library(TKernel_LIB TKernel)
+add_custom_target(external_downloads) # Create a target for all external dependencies
+add_dependencies(external_downloads eigen_ext)
 
-# Create needed directories
-set(DEPS_DIR ${CMAKE_BINARY_DIR}/deps)
-set(OCCT_PREFIX ${DEPS_DIR}/occt)
+# ------------------------------------------------------------------------------
+# OCCT
+# ------------------------------------------------------------------------------
+set(CMAKE_DEPS_DIR ${CMAKE_BINARY_DIR}/deps)
+set(OCCT_PREFIX ${CMAKE_DEPS_DIR}/occt) # Create needed directories
+file(MAKE_DIRECTORY ${CMAKE_DEPS_DIR})
 set(OCCT_SRC_DIR ${OCCT_PREFIX}/src/occt)
 set(OCCT_BUILD_DIR ${OCCT_PREFIX}/src/occt-build)
 set(OCCT_INSTALL_DIR ${OCCT_PREFIX}/install)
+set(OCCT_ALREADY_BUILT FALSE CACHE BOOL "Flag to indicate if OCCT has been built")
 
 # Set platform-specific library prefixes and extensions
 if(WIN32)
     set(LIB_PREFIX "")
     set(LIB_EXT ".lib")
-    set(LIB_DIR "win64/lib")
-else()
+    set(OCCT_LIB_DIR "${OCCT_BUILD_DIR}/win64/vc14/lib")
+    set(OCCT_INCLUDE_DIR "${OCCT_INSTALL_DIR}/inc")
+elseif(APPLE)
     set(LIB_PREFIX "lib")
     set(LIB_EXT ".a")
-    set(LIB_DIR "lib")
+    set(OCCT_LIB_DIR "${OCCT_BUILD_DIR}/mac64/lib")
+    set(OCCT_INCLUDE_DIR "${OCCT_INSTALL_DIR}/include/opencascade")
+else() # Linux
+    set(LIB_PREFIX "lib")
+    set(LIB_EXT ".a")
+    set(OCCT_LIB_DIR "${OCCT_BUILD_DIR}/lin64/lib")
+    set(OCCT_INCLUDE_DIR "${OCCT_INSTALL_DIR}/include/opencascade")
 endif()
 
-# List of OCCT modules
-set(OCCT_MODULES
-    TKBool
-    TKFillet
-    TKOffset
-    TKFeat
-    TKPrim
-    TKBO
-    TKMesh
-    TKHLR
-    TKShHealing
-    TKTopAlgo
-    TKGeomAlgo
-    TKBRep
-    TKGeomBase
-    TKG3d
-    TKG2d
-    TKMath
-    TKernel
-)
-
-# Generate the list of library paths with correct platform-specific naming
+# Generate the library targets list using OCCT_LIB_DIR already set for each platform
 set(OCCT_LIB_TARGETS "")
-# For Windows, use build directory libraries instead of install directory
-if(WIN32)
-    # Use the actual built libraries in the build directory
-    set(WIN_BUILD_LIB_DIR "${OCCT_BUILD_DIR}/win64/vc14/lib")
-    foreach(MODULE ${OCCT_MODULES})
-        list(APPEND OCCT_LIB_TARGETS "${WIN_BUILD_LIB_DIR}/${LIB_PREFIX}${MODULE}${LIB_EXT}")
-    endforeach()
-else()
-    # For non-Windows, use the installed libraries as before
-    foreach(MODULE ${OCCT_MODULES})
-        list(APPEND OCCT_LIB_TARGETS "${OCCT_INSTALL_DIR}/${LIB_DIR}/${LIB_PREFIX}${MODULE}${LIB_EXT}")
-    endforeach()
-endif()
+set(OCCT_MODULES TKBool TKFillet TKOffset TKFeat TKPrim TKBO TKMesh TKHLR TKShHealing TKTopAlgo TKGeomAlgo TKBRep TKGeomBase TKG3d TKG2d TKMath TKernel)
+foreach(MODULE ${OCCT_MODULES})
+    list(APPEND OCCT_LIB_TARGETS "${OCCT_LIB_DIR}/${LIB_PREFIX}${MODULE}${LIB_EXT}")
+endforeach()
 
-if(NOT OCCT_INCLUDE_DIR OR NOT TKernel_LIB)
-    # Build OCCT from source
+# Always create OCCT targets for dependency tracking
+add_custom_target(occt_ext)
+set(OCCT_TARGET occt_ext)
+
+if(NOT OCCT_ALREADY_BUILT)
     ExternalProject_Add(
-        occt
+        occt_download
         URL https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V7_9_0.zip
         PREFIX ${OCCT_PREFIX}
         SOURCE_DIR ${OCCT_SRC_DIR}
@@ -124,106 +92,34 @@ if(NOT OCCT_INCLUDE_DIR OR NOT TKernel_LIB)
             -DBUILD_SAMPLES_QT=OFF
             -DBUILD_MODULE_Modeling=ON
             -DBUILD_USE_PCH=OFF
-        # Limit parallel builds to prevent memory issues, especially with BRepApprox
         BUILD_COMMAND ${CMAKE_COMMAND} --build . --config Release -j2
-        INSTALL_COMMAND ${CMAKE_COMMAND} --install . --config Release
-        # Set LOG options for better debugging
+        INSTALL_COMMAND ${CMAKE_COMMAND} --install . --config Release --component Development
         LOG_DOWNLOAD ON
         LOG_CONFIGURE ON
         LOG_BUILD ON
         LOG_INSTALL ON
-        # Build byproducts are the OCCT libraries we need
         BUILD_BYPRODUCTS ${OCCT_LIB_TARGETS}
     )
-
-    # Windows uses a different include directory structure for OCCT
-    if(WIN32)
-        set(OCCT_INCLUDE_DIR ${OCCT_INSTALL_DIR}/inc)
-    else()
-        set(OCCT_INCLUDE_DIR ${OCCT_INSTALL_DIR}/include/opencascade)
-    endif()
-    set(OCCT_LIB_DIR ${OCCT_INSTALL_DIR}/lib)
-    set(OCCT_TARGET occt)
     
-    # Create a file that marks OCCT as built to avoid rebuilding it
-    file(MAKE_DIRECTORY ${DEPS_DIR})
-    file(WRITE ${DEPS_DIR}/occt_built.marker "OCCT built")
-else()
-    # If OCCT was found, use it
-    get_filename_component(OCCT_LIB_DIR ${TKernel_LIB} DIRECTORY)
-    
-    # Create dummy target for dependency tracking
-    add_custom_target(occt)
-    set(OCCT_TARGET occt)
-    
-    # Create a list of library targets for system-installed OCCT
-    set(OCCT_LIB_TARGETS "")
-    foreach(MODULE ${OCCT_MODULES})
-        # For the last item (TKernel), use the found library path directly
-        if("${MODULE}" STREQUAL "TKernel")
-            list(APPEND OCCT_LIB_TARGETS "${TKernel_LIB}")
-        else()
-            list(APPEND OCCT_LIB_TARGETS "${OCCT_LIB_DIR}/${LIB_PREFIX}${MODULE}${LIB_EXT}")
-        endif()
-    endforeach()
+    add_dependencies(external_downloads occt_download)
+    add_dependencies(occt_ext occt_download)
+    set(OCCT_ALREADY_BUILT TRUE CACHE BOOL "Flag to indicate if OCCT has been built" FORCE)
 endif()
 
 # ------------------------------------------------------------------------------
 # Build nanobind Python modules
 # ------------------------------------------------------------------------------
 
-# Define a function to add a module with proper dependencies
 function(add_nanobind_module module_name source_file)
-    # Create the nanobind module
     nanobind_add_module(${module_name} ${source_file})
-    
-    # Add include directories
-    target_include_directories(${module_name} PRIVATE
-        ${EIGEN_DIR}
-        ${OCCT_INCLUDE_DIR}
-    )
-    
-    # Explicitly add dependencies on external projects
-    add_dependencies(${module_name} ${EIGEN_TARGET})
-    add_dependencies(${module_name} ${OCCT_TARGET})
-    
-    # OCCT needs libraries to be linked in specific order to handle circular dependencies
-    foreach(lib_target ${OCCT_LIB_TARGETS})
-        # Make sure library path exists for CMake
-        if(NOT EXISTS "${lib_target}")
-            # Create a fake static library file to avoid CMake errors
-            # with linking to non-existent files during configuration
-            get_filename_component(lib_dir ${lib_target} DIRECTORY)
-            file(MAKE_DIRECTORY ${lib_dir})
-            
-            # Create an empty file if it doesn't exist
-            if(NOT EXISTS "${lib_target}")
-                file(TOUCH ${lib_target})
-            endif()
-        endif()
-    endforeach()
-    
-    # Link to all the OCCT libraries in the correct order
-    # On Windows, try a more resilient approach if direct linking fails
+    target_include_directories(${module_name} SYSTEM PRIVATE ${EIGEN_DIR} ${OCCT_INCLUDE_DIR})
     if(WIN32)
-        # First try to link directly with full paths
-        target_link_libraries(${module_name} PRIVATE ${OCCT_LIB_TARGETS})
-        # Add fallback link directories in case libraries need to be found by name
-        target_link_directories(${module_name} PRIVATE
-            ${OCCT_INSTALL_DIR}/lib
-            ${OCCT_INSTALL_DIR}/win64/lib
-        )
-    else()
-        # Standard approach for non-Windows platforms
-        target_link_libraries(${module_name} PRIVATE ${OCCT_LIB_TARGETS})
+        target_include_directories(${module_name} SYSTEM PRIVATE ${OCCT_SRC_DIR}/inc ${OCCT_BUILD_DIR}/inc)
     endif()
-    
-    # Install the target
+    add_dependencies(${module_name} ${EIGEN_TARGET} ${OCCT_TARGET})
+    target_link_libraries(${module_name} PRIVATE ${OCCT_LIB_TARGETS})
     install(TARGETS ${module_name} LIBRARY DESTINATION compas_occt)
 endfunction()
 
-# Add the nanobind modules
 add_nanobind_module(_primitives src/primitives.cpp)
 add_nanobind_module(_curves src/curves.cpp)
-
-
