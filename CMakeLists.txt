@@ -91,9 +91,19 @@ set(OCCT_MODULES
 
 # Generate the list of library paths with correct platform-specific naming
 set(OCCT_LIB_TARGETS "")
-foreach(MODULE ${OCCT_MODULES})
-    list(APPEND OCCT_LIB_TARGETS "${OCCT_INSTALL_DIR}/${LIB_DIR}/${LIB_PREFIX}${MODULE}${LIB_EXT}")
-endforeach()
+# For Windows, use build directory libraries instead of install directory
+if(WIN32)
+    # Use the actual built libraries in the build directory
+    set(WIN_BUILD_LIB_DIR "${OCCT_BUILD_DIR}/win64/vc14/lib")
+    foreach(MODULE ${OCCT_MODULES})
+        list(APPEND OCCT_LIB_TARGETS "${WIN_BUILD_LIB_DIR}/${LIB_PREFIX}${MODULE}${LIB_EXT}")
+    endforeach()
+else()
+    # For non-Windows, use the installed libraries as before
+    foreach(MODULE ${OCCT_MODULES})
+        list(APPEND OCCT_LIB_TARGETS "${OCCT_INSTALL_DIR}/${LIB_DIR}/${LIB_PREFIX}${MODULE}${LIB_EXT}")
+    endforeach()
+endif()
 
 if(NOT OCCT_INCLUDE_DIR OR NOT TKernel_LIB)
     # Build OCCT from source
@@ -126,7 +136,12 @@ if(NOT OCCT_INCLUDE_DIR OR NOT TKernel_LIB)
         BUILD_BYPRODUCTS ${OCCT_LIB_TARGETS}
     )
 
-    set(OCCT_INCLUDE_DIR ${OCCT_INSTALL_DIR}/include/opencascade)
+    # Windows uses a different include directory structure for OCCT
+    if(WIN32)
+        set(OCCT_INCLUDE_DIR ${OCCT_INSTALL_DIR}/inc)
+    else()
+        set(OCCT_INCLUDE_DIR ${OCCT_INSTALL_DIR}/include/opencascade)
+    endif()
     set(OCCT_LIB_DIR ${OCCT_INSTALL_DIR}/lib)
     set(OCCT_TARGET occt)
     
@@ -189,7 +204,19 @@ function(add_nanobind_module module_name source_file)
     endforeach()
     
     # Link to all the OCCT libraries in the correct order
-    target_link_libraries(${module_name} PRIVATE ${OCCT_LIB_TARGETS})
+    # On Windows, try a more resilient approach if direct linking fails
+    if(WIN32)
+        # First try to link directly with full paths
+        target_link_libraries(${module_name} PRIVATE ${OCCT_LIB_TARGETS})
+        # Add fallback link directories in case libraries need to be found by name
+        target_link_directories(${module_name} PRIVATE
+            ${OCCT_INSTALL_DIR}/lib
+            ${OCCT_INSTALL_DIR}/win64/lib
+        )
+    else()
+        # Standard approach for non-Windows platforms
+        target_link_libraries(${module_name} PRIVATE ${OCCT_LIB_TARGETS})
+    endif()
     
     # Install the target
     install(TARGETS ${module_name} LIBRARY DESTINATION compas_occt)
