@@ -46,12 +46,9 @@ set(OCCT_BUILD_DIR ${OCCT_PREFIX}/src/occt-build)
 set(OCCT_INSTALL_DIR ${OCCT_PREFIX}/install)
 set(OCCT_ALREADY_BUILT FALSE CACHE BOOL "Flag to indicate if OCCT has been built")
 
-# Include directories
-if(WIN32)
-    set(OCCT_INCLUDE_DIR "${OCCT_INSTALL_DIR}/inc")
-else()
-    set(OCCT_INCLUDE_DIR "${OCCT_BUILD_DIR}/include/opencascade")
-endif()
+# Use the same custom include path as specified in ExternalProject_Add
+set(OCCT_INCLUDE_DIR "${OCCT_INSTALL_DIR}/my_include" CACHE PATH "Path to OCCT headers" FORCE)
+message(STATUS "---------------------- OCCT_INCLUDE_DIR: ${OCCT_INCLUDE_DIR}")
 
 # Cache the library directory to avoid expensive recursive search on every run
 set(OCCT_LIB_DIR "" CACHE PATH "Path to OCCT libraries")
@@ -64,23 +61,9 @@ else()
     set(LIB_EXT ".a")
 endif()
 
-# Set platform-specific hardcoded paths for OCCT libraries
-if(NOT OCCT_LIB_DIR)
-    if(WIN32)
-        set(OCCT_LIB_DIR "${OCCT_BUILD_DIR}/win64/vc14/lib" CACHE PATH "Path to OCCT libraries" FORCE)
-    elseif(APPLE)
-        if(CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
-            set(OCCT_LIB_DIR "${OCCT_BUILD_DIR}/mac64/clang/lib" CACHE PATH "Path to OCCT libraries" FORCE)
-        else()
-            set(OCCT_LIB_DIR "${OCCT_BUILD_DIR}/macx86_64/clang/lib" CACHE PATH "Path to OCCT libraries" FORCE) 
-        endif()
-    else() # Linux
-        set(OCCT_LIB_DIR "${OCCT_BUILD_DIR}/lin64/gcc/lib" CACHE PATH "Path to OCCT libraries" FORCE)
-    endif()
-endif()
-
+# Use the same custom library path as specified in ExternalProject_Add
+set(OCCT_LIB_DIR "${OCCT_INSTALL_DIR}/my_static_libs" CACHE PATH "Path to OCCT libraries" FORCE)
 message(STATUS "---------------------- OCCT_LIB_DIR: ${OCCT_LIB_DIR}")
-message(STATUS "---------------------- OCCT_INCLUDE_DIR: ${OCCT_INCLUDE_DIR}")
 
 # Generate the library targets list using OCCT_LIB_DIR already set for each platform
 set(OCCT_LIB_TARGETS "")
@@ -102,6 +85,11 @@ if(NOT OCCT_ALREADY_BUILT)
         BINARY_DIR ${OCCT_BUILD_DIR}
         CMAKE_ARGS
             -DCMAKE_INSTALL_PREFIX=${OCCT_INSTALL_DIR}
+            # Use OCCT-specific install directory variables without quotes
+            -DINSTALL_DIR_LIB=my_static_libs 
+            -DINSTALL_DIR_INCLUDE=my_include 
+            -DINSTALL_DIR_LAYOUT=Unix
+            # Other build options
             -DCMAKE_BUILD_TYPE=Release
             -DBUILD_LIBRARY_TYPE=Static
             -DBUILD_MODULE_Draw=OFF
@@ -109,16 +97,19 @@ if(NOT OCCT_ALREADY_BUILT)
             -DBUILD_MODULE_DataExchange=OFF
             -DBUILD_MODULE_Visualization=OFF
             -DBUILD_SAMPLES_QT=OFF
-            -DBUILD_MODULE_Modeling=ON
-            -DBUILD_USE_PCH=OFF
-        BUILD_COMMAND ${CMAKE_COMMAND} --build . --config Release -j2
-        INSTALL_COMMAND ${CMAKE_COMMAND} --install . --config Release --component Development
+            -DBUILD_USE_PCH=ON
+        # Must build AND install the libraries to the custom location
+        BUILD_COMMAND ${CMAKE_COMMAND} --build . --config Release # -j4
+        INSTALL_COMMAND ${CMAKE_COMMAND} --install . --config Release
+        LOG_INSTALL OFF
+        LOG_BUILD OFF
         BUILD_BYPRODUCTS ${OCCT_LIB_TARGETS}
     )
     
     add_dependencies(external_downloads occt_download)
     add_dependencies(occt_ext occt_download)
     set(OCCT_ALREADY_BUILT TRUE CACHE BOOL "Flag to indicate if OCCT has been built" FORCE)
+    # OCCT_INCLUDE_DIR is already set at the top level
 endif()
 
 # ------------------------------------------------------------------------------
