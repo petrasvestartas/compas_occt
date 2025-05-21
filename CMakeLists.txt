@@ -43,15 +43,13 @@ set(OCCT_PREFIX ${CMAKE_DEPS_DIR}/occt) # Create needed directories
 file(MAKE_DIRECTORY ${CMAKE_DEPS_DIR})
 set(OCCT_SRC_DIR ${OCCT_PREFIX}/src/occt)
 set(OCCT_BUILD_DIR ${OCCT_PREFIX}/src/occt-build)
-set(OCCT_INSTALL_DIR ${OCCT_PREFIX}/install)
+set(OCCT_INSTALL_DIR ${OCCT_PREFIX}/install) # Use the same custom install path as specified in ExternalProject_Add
 set(OCCT_ALREADY_BUILT FALSE CACHE BOOL "Flag to indicate if OCCT has been built")
+set(OCCT_INCLUDE_DIR "${OCCT_INSTALL_DIR}/my_include" CACHE PATH "Path to OCCT headers" FORCE) # Use the same custom include path as specified in ExternalProject_Add
+set(OCCT_LIB_DIR "${OCCT_INSTALL_DIR}/my_static_libs" CACHE PATH "Path to OCCT libraries" FORCE)
 
-# Use the same custom include path as specified in ExternalProject_Add
-set(OCCT_INCLUDE_DIR "${OCCT_INSTALL_DIR}/my_include" CACHE PATH "Path to OCCT headers" FORCE)
 message(STATUS "---------------------- OCCT_INCLUDE_DIR: ${OCCT_INCLUDE_DIR}")
-
-# Cache the library directory to avoid expensive recursive search on every run
-set(OCCT_LIB_DIR "" CACHE PATH "Path to OCCT libraries")
+message(STATUS "---------------------- OCCT_LIB_DIR: ${OCCT_LIB_DIR}")
 
 if(WIN32)
     set(LIB_PREFIX "")
@@ -60,10 +58,6 @@ else()
     set(LIB_PREFIX "lib")
     set(LIB_EXT ".a")
 endif()
-
-# Use the same custom library path as specified in ExternalProject_Add
-set(OCCT_LIB_DIR "${OCCT_INSTALL_DIR}/my_static_libs" CACHE PATH "Path to OCCT libraries" FORCE)
-message(STATUS "---------------------- OCCT_LIB_DIR: ${OCCT_LIB_DIR}")
 
 # Generate the library targets list using OCCT_LIB_DIR already set for each platform
 set(OCCT_LIB_TARGETS "")
@@ -109,7 +103,6 @@ if(NOT OCCT_ALREADY_BUILT)
     add_dependencies(external_downloads occt_download)
     add_dependencies(occt_ext occt_download)
     set(OCCT_ALREADY_BUILT TRUE CACHE BOOL "Flag to indicate if OCCT has been built" FORCE)
-    # OCCT_INCLUDE_DIR is already set at the top level
 endif()
 
 # ------------------------------------------------------------------------------
