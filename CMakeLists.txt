@@ -33,6 +33,7 @@ endif()
 
 add_custom_target(external_downloads) # Create a target for all external dependencies
 add_dependencies(external_downloads eigen_ext)
+message(STATUS "---------------------- Eigen: ${EIGEN_DIR}")
 
 # ------------------------------------------------------------------------------
 # OCCT
@@ -45,23 +46,34 @@ set(OCCT_BUILD_DIR ${OCCT_PREFIX}/src/occt-build)
 set(OCCT_INSTALL_DIR ${OCCT_PREFIX}/install)
 set(OCCT_ALREADY_BUILT FALSE CACHE BOOL "Flag to indicate if OCCT has been built")
 
-# Set platform-specific library prefixes and extensions
+# Include directories
+if(WIN32)
+    set(OCCT_INCLUDE_DIR "${OCCT_INSTALL_DIR}/inc")
+else()
+    set(OCCT_INCLUDE_DIR "${OCCT_BUILD_DIR}/include/opencascade")
+endif()
+
+# Cache the library directory to avoid expensive recursive search on every run
+set(OCCT_LIB_DIR "" CACHE PATH "Path to OCCT libraries")
+
 if(WIN32)
     set(LIB_PREFIX "")
     set(LIB_EXT ".lib")
-    set(OCCT_LIB_DIR "${OCCT_BUILD_DIR}/win64/vc14/lib")
-    set(OCCT_INCLUDE_DIR "${OCCT_INSTALL_DIR}/inc")
-elseif(APPLE)
+else()
     set(LIB_PREFIX "lib")
     set(LIB_EXT ".a")
-    set(OCCT_LIB_DIR "${OCCT_BUILD_DIR}/mac64/lib")
-    set(OCCT_INCLUDE_DIR "${OCCT_INSTALL_DIR}/include/opencascade")
-else() # Linux
-    set(LIB_PREFIX "lib")
-    set(LIB_EXT ".a")
-    set(OCCT_LIB_DIR "${OCCT_BUILD_DIR}/lin64/lib")
-    set(OCCT_INCLUDE_DIR "${OCCT_INSTALL_DIR}/include/opencascade")
 endif()
+
+if(NOT OCCT_LIB_DIR)
+    set(SEARCH_PATTERN "${LIB_PREFIX}TKernel${LIB_EXT}")
+    file(GLOB_RECURSE FOUND_LIBS "${OCCT_BUILD_DIR}/${SEARCH_PATTERN}")
+    list(GET FOUND_LIBS 0 FIRST_LIB)
+    get_filename_component(LIB_DIR "${FIRST_LIB}" DIRECTORY)
+    set(OCCT_LIB_DIR "${LIB_DIR}" CACHE PATH "Path to OCCT libraries" FORCE)
+endif()
+
+message(STATUS "---------------------- OCCT_LIB_DIR: ${OCCT_LIB_DIR}")
+message(STATUS "---------------------- OCCT_INCLUDE_DIR: ${OCCT_INCLUDE_DIR}")
 
 # Generate the library targets list using OCCT_LIB_DIR already set for each platform
 set(OCCT_LIB_TARGETS "")
