@@ -1,6 +1,9 @@
 # compas_occt
 
-Nanobind wrapper for OCCT
+Windows, Mac, Linux Nanobind wrapper for OCCT
+
+![Screenshot 2025-05-23 184722](https://github.com/user-attachments/assets/1cc9662e-5de9-4f58-97f7-13ce489eed1a)
+
 
 ## Installation
 
