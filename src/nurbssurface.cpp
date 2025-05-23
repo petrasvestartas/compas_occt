@@ -1,6 +1,7 @@
 #include "compas.h"
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/unique_ptr.h>
+#include <nanobind/stl/vector.h>
 #include <TColgp_Array2OfPnt.hxx>
 #include <TColStd_Array2OfReal.hxx>
 #include <TColStd_Array1OfReal.hxx>
@@ -12,6 +13,17 @@
 #include <BRep_Tool.hxx>
 #include <TopLoc_Location.hxx>
 #include <Poly_Triangulation.hxx>
+
+// For timing measurements
+#include <chrono>
+#include <iostream>
+
+// For parallel processing
+#include <thread>
+#include <vector>
+#include <mutex>
+#include <algorithm>
+#include <functional>
 
 struct NB_Geom_BSplineSurface {
     Handle(Geom_BSplineSurface) surface;
@@ -192,53 +204,40 @@ std::vector<Eigen::Matrix<double, Eigen::Dynamic, 3, Eigen::RowMajor>> get_isocu
     return isocurves;
 }
 
-// 5. Get mesh from a NURBS surface
+// Original function for backward compatibility
 std::tuple<Eigen::Matrix<double, Eigen::Dynamic, 3, Eigen::RowMajor>, 
           Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor>> get_mesh(
     const NB_Geom_BSplineSurface& nurbs_surface, 
-    double deflection = 0.01) {
+    double deflection = 0.001) {
+    
     const Handle(Geom_BSplineSurface)& surface = nurbs_surface.surface;
     
     // Create a topological face from the surface
     TopoDS_Face face = BRepBuilderAPI_MakeFace(surface, 1e-6);
-    
-    // Mesh the face with specified deflection
     BRepMesh_IncrementalMesh mesh(face, deflection);
-    
-    // Get the triangulation
     TopLoc_Location loc;
     Handle(Poly_Triangulation) triangulation = BRep_Tool::Triangulation(face, loc);
     
-    if (triangulation.IsNull()) {
-        throw std::runtime_error("Failed to tessellate the surface");
+    Eigen::Matrix<double, Eigen::Dynamic, 3, Eigen::RowMajor> vertices(triangulation->NbNodes(), 3);
+    double* vertices_data = vertices.data();
+    for (int i = 1; i <= triangulation->NbNodes(); i++) {
+        gp_Pnt p = triangulation->InternalNodes().Value(i-1).Transformed(loc);
+        *vertices_data++ = p.X();
+        *vertices_data++ = p.Y();
+        *vertices_data++ = p.Z();
     }
     
-    // Get size of vertex and triangle arrays
-    const int num_vertices = triangulation->NbNodes();
-    const int num_triangles = triangulation->NbTriangles();
-    
-    // Create matrices for vertices and triangles
-    Eigen::Matrix<double, Eigen::Dynamic, 3, Eigen::RowMajor> vertices(num_vertices, 3);
-    Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor> triangles(num_triangles, 3);
-    
-    // Extract vertices
-    for (int i = 1; i <= num_vertices; i++) {
-        gp_Pnt p = triangulation->Node(i).Transformed(loc);
-        vertices(i-1, 0) = p.X();
-        vertices(i-1, 1) = p.Y();
-        vertices(i-1, 2) = p.Z();
-    }
-    
-    // Extract triangles (convert from 1-based to 0-based indexing)
-    for (int i = 1; i <= num_triangles; i++) {
+    Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor> triangles(triangulation->NbTriangles(), 3);
+    int* triangles_data = triangles.data();
+    for (int i = 1; i <= triangulation->NbTriangles(); i++) {
         int n1, n2, n3;
-        triangulation->Triangle(i).Get(n1, n2, n3);
-        triangles(i-1, 0) = n1 - 1;
-        triangles(i-1, 1) = n2 - 1;
-        triangles(i-1, 2) = n3 - 1;
+        triangulation->InternalTriangles().Value(i).Get(n1, n2, n3);
+        *triangles_data++ = n1 - 1;
+        *triangles_data++ = n2 - 1;
+        *triangles_data++ = n3 - 1;
     }
     
-    return std::make_tuple(vertices, triangles);
+    return std::make_tuple(std::move(vertices), std::move(triangles));
 }
 
 NB_MODULE(_nurbssurface, m) {
@@ -261,8 +260,9 @@ NB_MODULE(_nurbssurface, m) {
     m.def("get_mesh", 
         &get_mesh,
         nb::arg("surface"), 
-        nb::arg("deflection") = 0.01);
-        
+        nb::arg("deflection") = 0.01,
+        "Triangulate a NURBS surface into a mesh with vertices and faces");
+    
     m.def("get_isocurves",
         &get_isocurves,
         nb::arg("surface"),
