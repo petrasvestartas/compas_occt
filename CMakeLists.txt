@@ -108,3 +108,4 @@ endfunction()
 
 add_nanobind_module(_primitives src/primitives.cpp)
 add_nanobind_module(_curves src/curves.cpp)
+add_nanobind_module(_nurbssurface src/nurbssurface.cpp)
