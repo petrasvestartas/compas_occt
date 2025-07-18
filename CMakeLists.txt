@@ -173,7 +173,7 @@ endif()
 # ------------------------------------------------------------------------------
 
 function(add_nanobind_module module_name source_file)
-    nanobind_add_module(${module_name} ${source_file})                                          # Creates the Python extension module with nanobind
+    nanobind_add_module(${module_name} ${source_file} NB_STATIC)                                # Creates the Python extension module with nanobind, without stable ABI
     target_include_directories(${module_name} SYSTEM PRIVATE ${EIGEN_DIR} ${OCCT_INCLUDE_DIR})  # Add include paths for headers (SYSTEM suppresses warnings)
     add_dependencies(${module_name} eigen_ext occt_ext)                                         # Ensures Eigen and OCCT are built before this module
     
