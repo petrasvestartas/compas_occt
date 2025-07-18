@@ -140,6 +140,8 @@ if(NOT EXISTS "${OCCT_INSTALL_DIR}/my_include" OR NOT EXISTS "${OCCT_INSTALL_DIR
             # Remove 3rd parties
             -DUSE_FFMPEG=OFF
             -DUSE_FREETYPE=OFF
+            -DUSE_X11=OFF
+            -DUSE_OPENGL=OFF
         # Must build AND install the libraries to the custom location
         BUILD_COMMAND ${CMAKE_COMMAND} --build . --config Release # -j4
         INSTALL_COMMAND ${CMAKE_COMMAND} --install . --config Release
