@@ -127,12 +127,9 @@ if(NOT EXISTS "${OCCT_INSTALL_DIR}/my_include" OR NOT EXISTS "${OCCT_INSTALL_DIR
             -DINSTALL_DIR_INCLUDE=my_include
             -DINSTALL_DIR_LIB=my_shared_libs
             -DCMAKE_INSTALL_PREFIX=${OCCT_INSTALL_DIR}
-            # Use manylinux2014-compatible toolchain settings
-            -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-            -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-            -DCMAKE_C_FLAGS="${CMAKE_C_FLAGS} -fPIC"
-            -DCMAKE_CXX_FLAGS="${CMAKE_CXX_FLAGS} -fPIC"
-            -DCMAKE_SHARED_LINKER_FLAGS="${CMAKE_SHARED_LINKER_FLAGS}"
+            # Use compatible build settings
+            -DCMAKE_C_FLAGS=-fPIC
+            -DCMAKE_CXX_FLAGS=-fPIC
             -DBUILD_MODULE_Draw=OFF
             -DBUILD_MODULE_ApplicationFramework=ON
             -DBUILD_MODULE_DataExchange=ON

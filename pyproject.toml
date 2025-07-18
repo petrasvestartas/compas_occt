@@ -105,8 +105,8 @@ skip = ["*_i686", "*-musllinux_*", "*-win32", "cp312-*"]
 manylinux-x86_64-image = "manylinux2014"
 # Use pre-installed tools and install cmake from EPEL or alternative source
 before-all = "which cmake || (curl -L https://github.com/Kitware/CMake/releases/download/v3.25.0/cmake-3.25.0-linux-x86_64.tar.gz | tar -xz -C /opt && ln -sf /opt/cmake-3.25.0-linux-x86_64/bin/cmake /usr/local/bin/cmake) && which ninja || echo 'Using make instead of ninja'"
-# Set environment variables for manylinux2014 compatibility
-environment = { CC = "/opt/rh/devtoolset-10/root/usr/bin/gcc", CXX = "/opt/rh/devtoolset-10/root/usr/bin/g++", CFLAGS = "-fPIC -O2", CXXFLAGS = "-fPIC -O2" }
+# Set basic environment variables for compatibility
+environment = { CFLAGS = "-fPIC -O2", CXXFLAGS = "-fPIC -O2" }
 # Custom repair command to handle OCCT libraries
 repair-wheel-command = [
     "python -m zipfile -e {wheel} /tmp/wheel_extract",
