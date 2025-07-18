@@ -138,10 +138,15 @@ if(NOT EXISTS "${OCCT_INSTALL_DIR}/my_include" OR NOT EXISTS "${OCCT_INSTALL_DIR
             -DCMAKE_CXX_FLAGS="-frtti"
             -DBUILD_USE_PCH=ON
             # Remove 3rd parties
-            -DUSE_FFMPEG=OFF
-            -DUSE_FREETYPE=OFF
-            -DUSE_X11=OFF
+            -DUSE_XLIB=OFF
+            -DUSE_TK=OFF
             -DUSE_OPENGL=OFF
+            -DUSE_GLES2=OFF
+            -DUSE_EIGEN=OFF
+            -DUSE_OPENVR=OFF
+            -DUSE_DRACO=OFF
+            -DUSE_RAPIDJSON=OFF
+            -DUSE_QT=OFF
         # Must build AND install the libraries to the custom location
         BUILD_COMMAND ${CMAKE_COMMAND} --build . --config Release # -j4
         INSTALL_COMMAND ${CMAKE_COMMAND} --install . --config Release
