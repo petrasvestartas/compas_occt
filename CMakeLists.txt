@@ -173,7 +173,7 @@ endif()
 # ------------------------------------------------------------------------------
 
 function(add_nanobind_module module_name source_file)
-    nanobind_add_module(${module_name} ${source_file} NB_STATIC)                                # Creates the Python extension module with nanobind, without stable ABI
+    nanobind_add_module(${module_name} STABLE_ABI NB_STATIC ${source_file})                               # Creates the Python extension module with nanobind using stable ABI
     target_include_directories(${module_name} SYSTEM PRIVATE ${EIGEN_DIR} ${OCCT_INCLUDE_DIR})  # Add include paths for headers (SYSTEM suppresses warnings)
     add_dependencies(${module_name} eigen_ext occt_ext)                                         # Ensures Eigen and OCCT are built before this module
     
@@ -208,20 +208,30 @@ add_nanobind_module(_nurbssurface src/nurbssurface.cpp)
 add_nanobind_module(_step src/step.cpp)
 
 # Install OCCT shared libraries with the Python package for wheel distribution
+# This replaces the need for repair tools (auditwheel/delocate/delvewheel)
 if(WIN32)
     # On Windows, install DLLs in the same directory as Python modules
     install(DIRECTORY ${OCCT_LIB_DIR}/
         DESTINATION compas_occt
         FILES_MATCHING PATTERN "*.dll"
         PATTERN "*.lib" EXCLUDE
+        PATTERN "*.pdb" EXCLUDE
     )
 else()
     # On Unix-like systems, install in lib/ subdirectory
     install(DIRECTORY ${OCCT_LIB_DIR}/
         DESTINATION compas_occt/lib
         FILES_MATCHING 
-            PATTERN "*.so*"    # Linux
-            PATTERN "*.dylib*" # macOS
-        PATTERN "*.a" EXCLUDE
+            PATTERN "*.so*"    # Linux shared libraries
+            PATTERN "*.dylib*" # macOS dynamic libraries
+        PATTERN "*.a" EXCLUDE   # Exclude static libraries
+        PATTERN "*.la" EXCLUDE  # Exclude libtool archives
+    )
+    
+    # Also install any symlinks (important for versioned libraries)
+    # Note: CMake will automatically follow symlinks when copying files
+    install(DIRECTORY ${OCCT_LIB_DIR}/
+        DESTINATION compas_occt/lib
+        FILES_MATCHING PATTERN "*.so"
     )
 endif()
