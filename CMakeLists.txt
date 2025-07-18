@@ -129,13 +129,12 @@ if(NOT EXISTS "${OCCT_INSTALL_DIR}/my_include" OR NOT EXISTS "${OCCT_INSTALL_DIR
             -DCMAKE_INSTALL_PREFIX=${OCCT_INSTALL_DIR}
             # Use compatible build settings
             -DCMAKE_C_FLAGS=-fPIC
-            -DCMAKE_CXX_FLAGS=-fPIC
+            -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
             -DBUILD_MODULE_Draw=OFF
             -DBUILD_MODULE_ApplicationFramework=ON
             -DBUILD_MODULE_DataExchange=ON
             -DBUILD_MODULE_Visualization=OFF
             # Ensure RTTI is enabled for OCCT build
-            -DCMAKE_CXX_FLAGS="-frtti"
             -DBUILD_USE_PCH=ON
             # Remove 3rd parties
             -DUSE_XLIB=OFF
@@ -157,7 +156,13 @@ if(NOT EXISTS "${OCCT_INSTALL_DIR}/my_include" OR NOT EXISTS "${OCCT_INSTALL_DIR
 endif()
 
 # Ensure RTTI is enabled for our build as well
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -frtti")
+if(MSVC)
+    # MSVC enables RTTI by default, but we'll set it explicitly
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR")
+else()
+    # GCC/Clang flag for RTTI
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -frtti")
+endif()
 
 # ------------------------------------------------------------------------------
 # RPATH configuration to ensure OCCT libraries can be found at runtime
@@ -185,7 +190,13 @@ function(add_nanobind_module module_name source_file)
     add_dependencies(${module_name} eigen_ext occt_ext)                                         # Ensures Eigen and OCCT are built before this module
     
     # Set visibility flags for RTTI symbols and improve linkage
-    target_compile_options(${module_name} PRIVATE -frtti -fvisibility=default)
+    if(MSVC)
+        # MSVC options for RTTI
+        target_compile_options(${module_name} PRIVATE /GR)
+    else()
+        # GCC/Clang options
+        target_compile_options(${module_name} PRIVATE -frtti -fvisibility=default)
+    endif()
     set_target_properties(${module_name} PROPERTIES ENABLE_EXPORTS ON)
     
     # Configure RPATH for dynamic libraries (Unix-like systems only)
@@ -199,7 +210,19 @@ function(add_nanobind_module module_name source_file)
     endif()
     
     # Standard linking for dynamic libraries
-    target_link_libraries(${module_name} PRIVATE ${OCCT_LIB_TARGETS})
+    if(WIN32)
+        # Windows requires special handling of library paths
+        target_link_libraries(${module_name} PRIVATE ${OCCT_MODULES})
+        target_link_directories(${module_name} PRIVATE
+            ${OCCT_LIB_DIR}
+            # Additional potential locations
+            ${OCCT_INSTALL_DIR}/lib
+            ${OCCT_INSTALL_DIR}/win64/lib
+        )
+    else()
+        # Unix-like systems can use direct paths
+        target_link_libraries(${module_name} PRIVATE ${OCCT_LIB_TARGETS})
+    endif()
     
     # Optional: Add linker flags for better symbol resolution
     if(UNIX AND NOT APPLE)
