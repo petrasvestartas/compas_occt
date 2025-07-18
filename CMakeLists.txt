@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(ExternalProject)
-find_package(Python 3.8 REQUIRED COMPONENTS Interpreter Development.Module Development.SABIModule)
+find_package(Python 3.8 REQUIRED COMPONENTS Interpreter Development.Module OPTIONAL_COMPONENTS Development.SABIModule)
 # Set the path to find nanobind's CMake config
 list(APPEND CMAKE_PREFIX_PATH "${Python_SITELIB}/nanobind/cmake")
 find_package(nanobind CONFIG REQUIRED)
