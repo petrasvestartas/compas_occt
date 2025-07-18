@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(ExternalProject)
 find_package(Python 3.8 REQUIRED COMPONENTS Interpreter Development.Module Development.SABIModule)
+# Set the path to find nanobind's CMake config
+list(APPEND CMAKE_PREFIX_PATH "${Python_SITELIB}/nanobind/cmake")
 find_package(nanobind CONFIG REQUIRED)
 find_package(Threads REQUIRED)
 
@@ -41,50 +43,106 @@ set(OCCT_SRC_DIR ${OCCT_PREFIX}/src/occt)
 set(OCCT_BUILD_DIR ${OCCT_PREFIX}/src/occt-build)
 set(OCCT_INSTALL_DIR ${OCCT_PREFIX}/install) # Use the same custom install path as specified in ExternalProject_Add
 set(OCCT_INCLUDE_DIR "${OCCT_INSTALL_DIR}/my_include" CACHE PATH "Path to OCCT headers" FORCE) # Use the same custom include path as specified in ExternalProject_Add
-set(OCCT_LIB_DIR "${OCCT_INSTALL_DIR}/my_static_libs" CACHE PATH "Path to OCCT libraries" FORCE)
+set(OCCT_LIB_DIR "${OCCT_INSTALL_DIR}/my_shared_libs" CACHE PATH "Path to OCCT libraries" FORCE)
 
 message(STATUS "---------------------- OCCT_INCLUDE_DIR: ${OCCT_INCLUDE_DIR}")
 message(STATUS "---------------------- OCCT_LIB_DIR: ${OCCT_LIB_DIR}")
 
+# Platform-specific library settings
 if(WIN32)
     set(LIB_PREFIX "")
-    set(LIB_EXT ".lib")
+    set(LIB_EXT ".dll")
+    set(RPATH_ORIGIN "")  # Windows doesn't use RPATH
+elseif(APPLE)
+    set(LIB_PREFIX "lib")
+    set(LIB_EXT ".dylib")
+    set(RPATH_ORIGIN "@loader_path")
 else()
     set(LIB_PREFIX "lib")
-    set(LIB_EXT ".a")
+    set(LIB_EXT ".so")
+    set(RPATH_ORIGIN "$ORIGIN")
 endif()
 
-# OCCT has many static libraries. Generate the library targets list using OCCT_LIB_DIR.
+# OCCT has many dynamic libraries. Generate the library targets list using OCCT_LIB_DIR.
 set(OCCT_LIB_TARGETS "")
-set(OCCT_MODULES TKBool TKFillet TKOffset TKFeat TKPrim TKBO TKMesh TKHLR TKShHealing TKTopAlgo TKGeomAlgo TKBRep TKGeomBase TKG3d TKG2d TKMath TKernel)
+# OCCT modules for dynamic linking - core modules needed for functionality
+set(OCCT_MODULES 
+    # Base modules
+    TKernel TKMath 
+    # Geometry modules
+    TKG2d TKG3d TKGeomBase TKGeomAlgo TKBRep 
+    # Topology modules
+    TKTopAlgo TKShHealing 
+    # Boolean operations
+    TKBool TKBO 
+    # Modeling modules
+    TKFillet TKOffset TKFeat TKPrim TKMesh 
+    # STEP modules
+    TKCDF TKLCAF TKCAF TKV3d
+    TKService 
+    TKXSBase TKDE 
+    # Data exchange modules
+    TKXCAF TKDESTEP
+    # Binary and XML persistence
+    TKBin TKXml TKStd TKStdL TKBinL TKXmlL
+    # Other modules
+    TKTObj TKBinTObj TKXmlTObj
+)
+
+# # Add modeling libraries
+# list(APPEND OCCT_MODULES TKBool TKFillet TKOffset TKFeat TKPrim TKBO)
+
+# # Add mesh and healing libraries (exclude TKXMesh to avoid symbol conflicts)
+# list(APPEND OCCT_MODULES TKMesh TKHLR TKShHealing)
+
+# # Add STEP support libraries from DataExchange module
+# list(APPEND OCCT_MODULES TKDESTEP TKDE TKXSBase)
+
+# # Add Application Framework and XCAF libraries for STEP support
+# list(APPEND OCCT_MODULES TKXCAF TKLCAF TKCAF TKBinXCAF TKBin TKCDF TKXmlXCAF TKXml TKStd)
+
+# # Add remaining libraries (excluding ones with known symbol conflicts)
+# list(APPEND OCCT_MODULES TKBinL TKBinTObj TKStdL TKTObj TKXmlL TKXmlTObj TKService)
 foreach(MODULE ${OCCT_MODULES})
     list(APPEND OCCT_LIB_TARGETS "${OCCT_LIB_DIR}/${LIB_PREFIX}${MODULE}${LIB_EXT}")
 endforeach()
 
 add_custom_target(occt_ext) # This two-target approach solves the issue of first downloading then building our libraries
 
-if(NOT EXISTS "${OCCT_INSTALL_DIR}/my_include" OR NOT EXISTS "${OCCT_INSTALL_DIR}/my_static_libs")
+if(NOT EXISTS "${OCCT_INSTALL_DIR}/my_include" OR NOT EXISTS "${OCCT_INSTALL_DIR}/my_shared_libs")
     ExternalProject_Add(
         occt_download
         URL https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V7_9_0.zip
-        PREFIX ${OCCT_PREFIX}
         SOURCE_DIR ${OCCT_SRC_DIR}
         BINARY_DIR ${OCCT_BUILD_DIR}
+        INSTALL_DIR ${OCCT_INSTALL_DIR}
         CMAKE_ARGS
-            -DCMAKE_INSTALL_PREFIX=${OCCT_INSTALL_DIR}
-            # Use OCCT-specific install directory variables without quotes
-            -DINSTALL_DIR_LIB=my_static_libs 
-            -DINSTALL_DIR_INCLUDE=my_include 
-            -DINSTALL_DIR_LAYOUT=Unix
-            # Other build options
             -DCMAKE_BUILD_TYPE=Release
-            -DBUILD_LIBRARY_TYPE=Static
+            -DBUILD_LIBRARY_TYPE=Shared
+            -DUSE_FREEIMAGE=OFF
+            -DUSE_FFMPEG=OFF
+            -DUSE_TBB=OFF
+            -DUSE_VTK=OFF
+            -DUSE_FREETYPE=OFF
+            -DINSTALL_DIR_INCLUDE=my_include
+            -DINSTALL_DIR_LIB=my_shared_libs
+            -DCMAKE_INSTALL_PREFIX=${OCCT_INSTALL_DIR}
+            # Use manylinux2014-compatible toolchain settings
+            -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+            -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+            -DCMAKE_C_FLAGS="${CMAKE_C_FLAGS} -fPIC"
+            -DCMAKE_CXX_FLAGS="${CMAKE_CXX_FLAGS} -fPIC"
+            -DCMAKE_SHARED_LINKER_FLAGS="${CMAKE_SHARED_LINKER_FLAGS}"
             -DBUILD_MODULE_Draw=OFF
-            -DBUILD_MODULE_ApplicationFramework=OFF
-            -DBUILD_MODULE_DataExchange=OFF
+            -DBUILD_MODULE_ApplicationFramework=ON
+            -DBUILD_MODULE_DataExchange=ON
             -DBUILD_MODULE_Visualization=OFF
-            -DBUILD_SAMPLES_QT=OFF
+            # Ensure RTTI is enabled for OCCT build
+            -DCMAKE_CXX_FLAGS="-frtti"
             -DBUILD_USE_PCH=ON
+            # Remove 3rd parties
+            -DUSE_FFMPEG=OFF
+            -DUSE_FREETYPE=OFF
         # Must build AND install the libraries to the custom location
         BUILD_COMMAND ${CMAKE_COMMAND} --build . --config Release # -j4
         INSTALL_COMMAND ${CMAKE_COMMAND} --install . --config Release
@@ -92,6 +150,25 @@ if(NOT EXISTS "${OCCT_INSTALL_DIR}/my_include" OR NOT EXISTS "${OCCT_INSTALL_DIR
     )
     
     add_dependencies(occt_ext occt_download)
+endif()
+
+# Ensure RTTI is enabled for our build as well
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -frtti")
+
+# ------------------------------------------------------------------------------
+# RPATH configuration to ensure OCCT libraries can be found at runtime
+# ------------------------------------------------------------------------------
+# Set RPATH for all targets
+set(CMAKE_INSTALL_RPATH "${OCCT_LIB_DIR}")
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+
+# Use the RPATH for installed binaries/libraries
+if(NOT APPLE)
+    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+    set(CMAKE_SKIP_BUILD_RPATH FALSE)
+else()
+    # macOS-specific RPATH settings
+    set(CMAKE_MACOSX_RPATH ON)
 endif()
 
 # ------------------------------------------------------------------------------
@@ -102,7 +179,29 @@ function(add_nanobind_module module_name source_file)
     nanobind_add_module(${module_name} ${source_file})                                          # Creates the Python extension module with nanobind
     target_include_directories(${module_name} SYSTEM PRIVATE ${EIGEN_DIR} ${OCCT_INCLUDE_DIR})  # Add include paths for headers (SYSTEM suppresses warnings)
     add_dependencies(${module_name} eigen_ext occt_ext)                                         # Ensures Eigen and OCCT are built before this module
-    target_link_libraries(${module_name} PRIVATE ${OCCT_LIB_TARGETS})                           # Links against all the OCCT static libraries
+    
+    # Set visibility flags for RTTI symbols and improve linkage
+    target_compile_options(${module_name} PRIVATE -frtti -fvisibility=default)
+    set_target_properties(${module_name} PROPERTIES ENABLE_EXPORTS ON)
+    
+    # Configure RPATH for dynamic libraries (Unix-like systems only)
+    if(NOT WIN32)
+        set_target_properties(${module_name} PROPERTIES
+            BUILD_RPATH "${OCCT_LIB_DIR}"
+            INSTALL_RPATH "${RPATH_ORIGIN}/lib"  # Platform-specific relative path
+            BUILD_RPATH_USE_ORIGIN TRUE
+            INSTALL_RPATH_USE_LINK_PATH FALSE
+        )
+    endif()
+    
+    # Standard linking for dynamic libraries
+    target_link_libraries(${module_name} PRIVATE ${OCCT_LIB_TARGETS})
+    
+    # Optional: Add linker flags for better symbol resolution
+    if(UNIX AND NOT APPLE)
+        target_link_options(${module_name} PRIVATE -Wl,--no-as-needed)
+    endif()
+    
     install(TARGETS ${module_name} LIBRARY DESTINATION compas_occt)                             # Installs the compiled module to the compas_occt package
 endfunction()
 
@@ -110,3 +209,22 @@ add_nanobind_module(_primitives src/primitives.cpp)
 add_nanobind_module(_curves src/curves.cpp)
 add_nanobind_module(_nurbssurface src/nurbssurface.cpp)
 add_nanobind_module(_step src/step.cpp)
+
+# Install OCCT shared libraries with the Python package for wheel distribution
+if(WIN32)
+    # On Windows, install DLLs in the same directory as Python modules
+    install(DIRECTORY ${OCCT_LIB_DIR}/
+        DESTINATION compas_occt
+        FILES_MATCHING PATTERN "*.dll"
+        PATTERN "*.lib" EXCLUDE
+    )
+else()
+    # On Unix-like systems, install in lib/ subdirectory
+    install(DIRECTORY ${OCCT_LIB_DIR}/
+        DESTINATION compas_occt/lib
+        FILES_MATCHING 
+            PATTERN "*.so*"    # Linux
+            PATTERN "*.dylib*" # macOS
+        PATTERN "*.a" EXCLUDE
+    )
+endif()
