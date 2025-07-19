@@ -43,10 +43,21 @@ set(OCCT_SRC_DIR ${OCCT_PREFIX}/src/occt)
 set(OCCT_BUILD_DIR ${OCCT_PREFIX}/src/occt-build)
 set(OCCT_INSTALL_DIR ${OCCT_PREFIX}/install) # Use the same custom install path as specified in ExternalProject_Add
 set(OCCT_INCLUDE_DIR "${OCCT_INSTALL_DIR}/my_include" CACHE PATH "Path to OCCT headers" FORCE) # Use the same custom include path as specified in ExternalProject_Add
-set(OCCT_LIB_DIR "${OCCT_INSTALL_DIR}/my_shared_libs" CACHE PATH "Path to OCCT libraries" FORCE)
+
+# Platform-specific library directory settings
+if(WIN32)
+    set(OCCT_LIB_DIR "${OCCT_INSTALL_DIR}/my_shared_libs" CACHE PATH "Path to OCCT import libraries" FORCE)
+    set(OCCT_DLL_DIR "${OCCT_INSTALL_DIR}/win64/vc14/bin" CACHE PATH "Path to OCCT DLLs" FORCE)
+else()
+    set(OCCT_LIB_DIR "${OCCT_INSTALL_DIR}/my_shared_libs" CACHE PATH "Path to OCCT libraries" FORCE)
+    set(OCCT_DLL_DIR "${OCCT_LIB_DIR}" CACHE PATH "Path to OCCT shared libraries" FORCE)
+endif()
 
 message(STATUS "---------------------- OCCT_INCLUDE_DIR: ${OCCT_INCLUDE_DIR}")
 message(STATUS "---------------------- OCCT_LIB_DIR: ${OCCT_LIB_DIR}")
+if(WIN32)
+    message(STATUS "---------------------- OCCT_DLL_DIR: ${OCCT_DLL_DIR}")
+endif()
 
 # Platform-specific library settings
 if(WIN32)
@@ -85,6 +96,8 @@ set(OCCT_MODULES
     TKXCAF TKDESTEP
     # Binary and XML persistence
     TKBin TKXml TKStd TKStdL TKBinL TKXmlL
+    # XCAF Binary persistence
+    TKBinXCAF TKXmlXCAF
     # Other modules
     TKTObj TKBinTObj TKXmlTObj
 )
@@ -218,6 +231,7 @@ function(add_nanobind_module module_name source_file)
             # Additional potential locations
             ${OCCT_INSTALL_DIR}/lib
             ${OCCT_INSTALL_DIR}/win64/lib
+            ${OCCT_INSTALL_DIR}/win64/vc14/lib
         )
     else()
         # Unix-like systems can use direct paths
@@ -241,11 +255,12 @@ add_nanobind_module(_step src/step.cpp)
 # This replaces the need for repair tools (auditwheel/delocate/delvewheel)
 if(WIN32)
     # On Windows, install DLLs in the same directory as Python modules
-    install(DIRECTORY ${OCCT_LIB_DIR}/
+    install(DIRECTORY ${OCCT_DLL_DIR}/
         DESTINATION compas_occt
         FILES_MATCHING PATTERN "*.dll"
         PATTERN "*.lib" EXCLUDE
         PATTERN "*.pdb" EXCLUDE
+        PATTERN "*.exe" EXCLUDE
     )
 else()
     # On Unix-like systems, install in lib/ subdirectory
