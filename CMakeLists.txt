@@ -34,6 +34,29 @@ if(NOT EXISTS "${EIGEN_DIR}/Eigen")
 endif()
 
 # ------------------------------------------------------------------------------
+# nlohmann/json (header-only library)
+# ------------------------------------------------------------------------------
+set(JSON_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/json")
+add_custom_target(json_ext) # This two-target approach solves the issue of first downloading then building our libraries
+message(STATUS "---------------------- JSON: ${JSON_DIR}")
+
+if(NOT EXISTS "${JSON_DIR}/include/nlohmann/json.hpp")
+    ExternalProject_Add(
+        json_download
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG v3.11.3
+        PREFIX ${CMAKE_BINARY_DIR}/deps/json
+        SOURCE_DIR ${JSON_DIR}
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND ""
+        INSTALL_COMMAND ""
+        TEST_COMMAND ""
+    )
+    add_dependencies(json_ext json_download)
+endif()
+
+
+# ------------------------------------------------------------------------------
 # OCCT (static libraries)
 # ------------------------------------------------------------------------------
 set(CMAKE_DEPS_DIR ${CMAKE_BINARY_DIR}/deps)
@@ -125,7 +148,9 @@ add_custom_target(occt_ext) # This two-target approach solves the issue of first
 if(NOT EXISTS "${OCCT_INSTALL_DIR}/my_include" OR NOT EXISTS "${OCCT_INSTALL_DIR}/my_shared_libs")
     ExternalProject_Add(
         occt_download
-        URL https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V7_9_0.zip
+        # URL https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V7_9_0.zip
+        GIT_REPOSITORY https://github.com/petrasvestartas/OCCT.git
+        GIT_TAG 0033896
         SOURCE_DIR ${OCCT_SRC_DIR}
         BINARY_DIR ${OCCT_BUILD_DIR}
         INSTALL_DIR ${OCCT_INSTALL_DIR}
@@ -199,8 +224,8 @@ endif()
 
 function(add_nanobind_module module_name source_file)
     nanobind_add_module(${module_name} STABLE_ABI NB_STATIC ${source_file})                               # Creates the Python extension module with nanobind using stable ABI
-    target_include_directories(${module_name} SYSTEM PRIVATE ${EIGEN_DIR} ${OCCT_INCLUDE_DIR})  # Add include paths for headers (SYSTEM suppresses warnings)
-    add_dependencies(${module_name} eigen_ext occt_ext)                                         # Ensures Eigen and OCCT are built before this module
+    target_include_directories(${module_name} SYSTEM PRIVATE ${EIGEN_DIR} ${OCCT_INCLUDE_DIR} ${JSON_DIR}/include)
+    add_dependencies(${module_name} eigen_ext occt_ext json_ext)                                     # Ensures Eigen and OCCT are built before this module
     
     # Set visibility flags for RTTI symbols and improve linkage
     if(MSVC)
@@ -250,6 +275,7 @@ add_nanobind_module(_primitives src/primitives.cpp)
 add_nanobind_module(_curves src/curves.cpp)
 add_nanobind_module(_nurbssurface src/nurbssurface.cpp)
 add_nanobind_module(_step src/step.cpp)
+add_nanobind_module(_point src/point.cpp)
 
 # Install OCCT shared libraries with the Python package for wheel distribution
 # This replaces the need for repair tools (auditwheel/delocate/delvewheel)

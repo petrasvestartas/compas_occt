@@ -1,6 +1,11 @@
 #include "compas.h"
 #include <nanobind/stl/string.h>
 
+// JSON
+#include <fstream>
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
+
 // STEP I/O includes
 #include <STEPControl_Reader.hxx>
 #include <STEPCAFControl_Writer.hxx>
@@ -53,6 +58,8 @@
 #include <TopTools_IndexedMapOfShape.hxx>
 #include <TopExp.hxx>
 #include <gp_Quaternion.hxx>
+
+
 
 TopoDS_Shape BuildWheel(const double OD, const double W){
   return BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(-W/2, 0, 0), gp::DX()), OD/2, W);
@@ -175,10 +182,23 @@ void tutorial(){
   TDataStd_Name::Set(wheelAxleProto.label, "wheelAxle");
   TDataStd_Name::Set(chassisProto.label, "chassis");
 
-  // for (TDF_ChildIterator cit(chassisProto.label); cit.More(); cit.Next()) {
-  //   TDF_Label componentLabel = cit.Value();
-  //   TDataStd_Name::Set(componentLabel, "wheel_axle_instance");
-  // }
+  // Add metadata to test our new metadata export functionality
+  Handle(TDataStd_NamedData) wheelMetadata = TDataStd_NamedData::Set(wheelProto.label);
+  wheelMetadata->SetString("COMPAS_metadata_1", "My Awesome metadata! 1");
+  wheelMetadata->SetString("COMPAS_metadata_2", "My Awesome metadata! 2");
+
+  Handle(TDataStd_NamedData) axleMetadata = TDataStd_NamedData::Set(axleProto.label);
+  axleMetadata->SetString("COMPAS_axle_metadata_1", "My Awesome metadata! 1");
+  axleMetadata->SetString("COMPAS_axle_metadata_2", "My Awesome metadata! 2");
+
+  Handle(TDataStd_NamedData) wheelAxleMetadata = TDataStd_NamedData::Set(wheelAxleProto.label);
+  wheelAxleMetadata->SetString("COMPAS_wheel_axle_metadata_1", "My Awesome metadata! 1");
+  wheelAxleMetadata->SetString("COMPAS_wheel_axle_metadata_2", "My Awesome metadata! 2");
+
+  Handle(TDataStd_NamedData) chassisMetadata = TDataStd_NamedData::Set(chassisProto.label);
+  chassisMetadata->SetString("COMPAS_chassis_metadata_1", "My Awesome metadata! 1");
+  chassisMetadata->SetString("COMPAS_chassis_metadata_2", "My Awesome metadata! 2");
+
   // Find actual component references (not just direct children)
   TDF_LabelSequence components;
   ST->GetComponents(chassisProto.label, components);
@@ -200,23 +220,20 @@ void tutorial(){
  
 
   
-  
-  PCDM_StoreStatus status = app->SaveAs(doc, "C:\\brg\\code\\compas_occt\\data\\tutorial.xbf");
+  // PCDM_StoreStatus status = app->SaveAs(doc, "tutorial.xbf");
+  // if (status != PCDM_SS_OK) {
+  //   std::cout << "Failed to save document" << std::endl;
+  //   return;
+  // }
 
-  if (status != PCDM_SS_OK) {
-    std::cout << "Failed to save document" << std::endl;
-    return;
-  }
-
-  if (!WriteStep(doc, "C:\\brg\\code\\compas_occt\\data\\tutorial.step")) {
+  if (!WriteStep(doc, "tutorial.step")) {
     std::cout << "Failed to write STEP file" << std::endl;
     return;
   }
 
   std::cout << "Tutorial End" << std::endl;
-  
-
 }
+
 
 
 
@@ -309,10 +326,310 @@ void assemble(const std::string& input_path, const std::string& output_path) {
   }
 }
 
+// Helper function to read STEP file and import into XDE document
+TDF_Label readStepFileToXDE(const std::string& step_path, Handle(XCAFDoc_ShapeTool) shapeTool) {
+  STEPCAFControl_Reader reader;
+  IFSelect_ReturnStatus status = reader.ReadFile(step_path.c_str());
+  if (status != IFSelect_RetDone) {
+    std::cerr << "Error reading STEP file: " << step_path << std::endl;
+    return TDF_Label();
+  }
+  
+  // Create a temporary document to read the STEP file
+  Handle(TDocStd_Application) tempApp = new TDocStd_Application;
+  BinXCAFDrivers::DefineFormat(tempApp);
+  Handle(TDocStd_Document) tempDoc;
+  tempApp->NewDocument("BinXCAF", tempDoc);
+  
+  // Transfer the STEP file to the temporary document
+  if (!reader.Transfer(tempDoc)) {
+    std::cerr << "Error transferring STEP file: " << step_path << std::endl;
+    return TDF_Label();
+  }
+  
+  // Get the shape tool from the temporary document
+  Handle(XCAFDoc_ShapeTool) tempShapeTool = XCAFDoc_DocumentTool::ShapeTool(tempDoc->Main());
+  
+  // Get all free shapes from the temporary document
+  TDF_LabelSequence freeShapes;
+  tempShapeTool->GetFreeShapes(freeShapes);
+  
+  if (freeShapes.Length() > 0) {
+    // Get the first free shape
+    TDF_Label tempLabel = freeShapes.Value(1);
+    TopoDS_Shape shape;
+    if (tempShapeTool->GetShape(tempLabel, shape) && !shape.IsNull()) {
+      std::cout << "  Successfully read shape from: " << step_path << std::endl;
+      std::cout << "  Shape type: " << shape.ShapeType() << std::endl;
+      
+      // Add the shape to our main document
+      TDF_Label newLabel = shapeTool->AddShape(shape, Standard_False);
+      return newLabel;
+    }
+  }
+  
+  std::cout << "  WARNING: No valid shapes found in: " << step_path << std::endl;
+  return TDF_Label();
+}
 
+// Helper function to read STEP file as TopoDS_Shape (following tutorial pattern)
+TopoDS_Shape readStepFileAsShape(const std::string& step_path) {
+  STEPControl_Reader reader;
+  IFSelect_ReturnStatus status = reader.ReadFile(step_path.c_str());
+  
+  if (status != IFSelect_RetDone) {
+    std::cerr << "Error reading STEP file: " << step_path << std::endl;
+    return TopoDS_Shape();
+  }
+  
+  reader.TransferRoots();
+  TopoDS_Shape shape = reader.OneShape();
+  
+  if (shape.IsNull()) {
+    std::cerr << "Error: No shape found in STEP file: " << step_path << std::endl;
+    return TopoDS_Shape();
+  }
+  
+  std::cout << "  Successfully read shape from: " << step_path << std::endl;
+  return shape;
+}
+
+// Function to process tree nodes as components (not free shapes)
+TDF_Label processTreeNodeAsComponent(const nlohmann::json& node, Handle(XCAFDoc_ShapeTool) ST, 
+                                    Handle(XCAFDoc_ColorTool) CT, TDF_Label parentLabel) {
+  
+  std::cout << "Processing component node: " << node["name"].get<std::string>() << std::endl;
+  
+  TopoDS_Shape nodeShape;
+  
+  // Check if this node has a STEP file
+  nlohmann::json attributes = node.contains("attributes") ? node["attributes"] : nlohmann::json::object();
+  
+  if (attributes.contains("step")) {
+    std::string stepPath = attributes["step"].get<std::string>();
+    std::cout << "  Found step attribute, reading file: " << stepPath << std::endl;
+    
+    // Read STEP file as shape
+    nodeShape = readStepFileAsShape(stepPath);
+    
+    if (nodeShape.IsNull()) {
+      std::cerr << "  Failed to read STEP file: " << stepPath << std::endl;
+      return TDF_Label();
+    }
+  }
+  
+  // Determine if this node has children
+  bool hasChildren = node.contains("children") && !node["children"].empty();
+  
+  TDF_Label componentLabel;
+  
+  if (!nodeShape.IsNull() && !hasChildren) {
+    // Leaf component - add shape and create component reference
+    TDF_Label shapeLabel = ST->AddShape(nodeShape, false);
+    componentLabel = ST->AddComponent(parentLabel, shapeLabel, TopLoc_Location());
+    std::cout << "  Added leaf component to parent assembly" << std::endl;
+  } else if (!nodeShape.IsNull() && hasChildren) {
+    // Assembly component with geometry - add as assembly and create component reference
+    TDF_Label assemblyLabel = ST->AddShape(nodeShape, true);
+    componentLabel = ST->AddComponent(parentLabel, assemblyLabel, TopLoc_Location());
+    std::cout << "  Added assembly component with geometry to parent" << std::endl;
+    
+    // Process children recursively
+    for (const auto& child : node["children"]) {
+      processTreeNodeAsComponent(child, ST, CT, assemblyLabel);
+    }
+  } else if (nodeShape.IsNull() && hasChildren) {
+    // Pure assembly component - create compound and add as component
+    TopoDS_Compound compound;
+    BRep_Builder builder;
+    builder.MakeCompound(compound);
+    
+    TDF_Label assemblyLabel = ST->AddShape(compound, true);
+    componentLabel = ST->AddComponent(parentLabel, assemblyLabel, TopLoc_Location());
+    std::cout << "  Added pure assembly component to parent" << std::endl;
+    
+    // Process children recursively
+    for (const auto& child : node["children"]) {
+      processTreeNodeAsComponent(child, ST, CT, assemblyLabel);
+    }
+  } else {
+    std::cerr << "  Warning: Component has no geometry and no children" << std::endl;
+    return TDF_Label();
+  }
+  
+  // Set name and metadata on the component label
+  if (!componentLabel.IsNull()) {
+    // Set name
+    std::string nodeName = node["name"].get<std::string>();
+    TDataStd_Name::Set(componentLabel, nodeName.c_str());
+    std::cout << "  Set component name: " << nodeName << std::endl;
+    
+    // Set metadata
+    if (node.contains("attributes")) {
+      Handle(TDataStd_NamedData) namedData = TDataStd_NamedData::Set(componentLabel);
+      
+      for (auto& [key, value] : node["attributes"].items()) {
+        // Skip the "step" attribute as it's not metadata
+        if (key == "step") continue;
+        
+        if (value.is_string()) {
+          std::string valueStr = value.get<std::string>();
+          namedData->SetString(key.c_str(), valueStr.c_str());
+          std::cout << "    Set component metadata: " << key << " = " << valueStr << std::endl;
+        }
+      }
+    }
+  }
+  
+  return componentLabel;
+}
+
+// Recursive function to process tree nodes - following tutorial pattern EXACTLY
+TDF_Label processTreeNode(const nlohmann::json& node, Handle(XCAFDoc_ShapeTool) ST, 
+                         Handle(XCAFDoc_ColorTool) CT, TDF_Label parentLabel = TDF_Label()) {
+  
+  TDF_Label nodeLabel;
+  TopoDS_Shape nodeShape;
+  
+  // Check if this node has a STEP file
+  nlohmann::json attributes = node.contains("attributes") ? node["attributes"] : nlohmann::json::object();
+  
+  if (attributes.contains("step")) {
+    std::string stepPath = attributes["step"].get<std::string>();
+    
+    // Read STEP file as shape - EXACTLY like tutorial creates shapes
+    nodeShape = readStepFileAsShape(stepPath);
+    
+    if (nodeShape.IsNull()) {
+      std::cerr << "Failed to read STEP file: " << stepPath << std::endl;
+      return TDF_Label();
+    }
+  }
+  
+  // Determine if this node has children
+  bool hasChildren = node.contains("children") && !node["children"].empty();
+  
+  if (hasChildren) {
+    // Process children first to get their shapes
+    std::vector<TopoDS_Shape> childShapes;
+    std::vector<TDF_Label> childLabels;
+    
+    for (const auto& child : node["children"]) {
+      TDF_Label childLabel = processTreeNode(child, ST, CT);
+      if (!childLabel.IsNull()) {
+        childLabels.push_back(childLabel);
+        TopoDS_Shape childShape;
+        if (ST->GetShape(childLabel, childShape)) {
+          childShapes.push_back(childShape);
+        }
+      }
+    }
+    
+    // Create compound assembly containing all child shapes - EXACTLY like tutorial
+    TopoDS_Compound compound;
+    BRep_Builder builder;
+    builder.MakeCompound(compound);
+    
+    // Add node's own geometry if it has any
+    if (!nodeShape.IsNull()) {
+      builder.Add(compound, nodeShape);
+    }
+    
+    // Add all child shapes to the compound - EXACTLY like BuildWheelAxle/BuildChassis
+    for (const TopoDS_Shape& childShape : childShapes) {
+      builder.Add(compound, childShape);
+    }
+    
+    // Add the compound as an assembly - EXACTLY like tutorial
+    nodeLabel = ST->AddShape(compound, true);
+    
+  } else {
+    // Leaf node - add shape directly - EXACTLY like tutorial wheel/axle prototypes
+    if (!nodeShape.IsNull()) {
+      nodeLabel = ST->AddShape(nodeShape, false);
+    } else {
+      std::cerr << "Warning: Leaf node has no geometry" << std::endl;
+      return TDF_Label();
+    }
+  }
+  
+  // Set name and metadata - EXACTLY like tutorial
+  if (!nodeLabel.IsNull()) {
+    // Set name
+    std::string nodeName = node["name"].get<std::string>();
+    TDataStd_Name::Set(nodeLabel, nodeName.c_str());
+    
+    // Set metadata - EXACTLY like tutorial
+    if (node.contains("attributes")) {
+      Handle(TDataStd_NamedData) namedData = TDataStd_NamedData::Set(nodeLabel);
+      
+      for (auto& [key, value] : node["attributes"].items()) {
+        // Skip the "step" attribute as it's not metadata
+        if (key == "step") continue;
+        
+        if (value.is_string()) {
+          std::string valueStr = value.get<std::string>();
+          namedData->SetString(key.c_str(), valueStr.c_str());
+        }
+      }
+    }
+  }
+  
+  return nodeLabel;
+}
+
+void from_json(const std::string& input_path, const std::string& output_path){
+  
+  // Read and parse JSON file
+  std::ifstream file(input_path);
+  if (!file.is_open()) {
+    std::cerr << "Error: Could not open JSON file: " << input_path << std::endl;
+    return;
+  }
+  
+  nlohmann::json json_data;
+  try {
+    file >> json_data;
+  } catch (const std::exception& e) {
+    std::cerr << "Error parsing JSON: " << e.what() << std::endl;
+    return;
+  }
+  
+  // Validate JSON structure
+  if (!json_data.contains("data") || !json_data["data"].contains("root")) {
+    std::cerr << "Error: Invalid JSON structure - missing 'data.root'" << std::endl;
+    return;
+  }
+  
+  nlohmann::json rootNode = json_data["data"]["root"];
+  
+  // Create XDE document - EXACTLY like tutorial
+  Handle(TDocStd_Application) app = new TDocStd_Application;
+  BinXCAFDrivers::DefineFormat(app);
+  Handle(TDocStd_Document) doc;
+  app->NewDocument("BinXCAF", doc);
+  
+  Handle(XCAFDoc_ShapeTool) ST = XCAFDoc_DocumentTool::ShapeTool(doc->Main());
+  Handle(XCAFDoc_ColorTool) CT = XCAFDoc_DocumentTool::ColorTool(doc->Main());
+  
+  // Process the tree and build assembly - following tutorial pattern EXACTLY
+  TDF_Label rootLabel = processTreeNode(rootNode, ST, CT);
+  
+  if (rootLabel.IsNull()) {
+    std::cerr << "Error: Failed to process JSON tree" << std::endl;
+    return;
+  }
+  
+  // Write STEP file - EXACTLY like tutorial
+  if (!WriteStep(doc, output_path)) {
+    std::cerr << "Error: Failed to write STEP file" << std::endl;
+    return;
+  }
+}
 
 NB_MODULE(_step, m) {
     m.doc() = "STEP file I/O functions";
+    m.def("from_json", &from_json);
     m.def("assemble", &assemble, "Read STEP file, create assembly with 4 translated copies including attributes (names, colors, validation properties)", "input_path"_a, "output_path"_a);
     m.def("tutorial", &tutorial, "Tutorial function");
 }

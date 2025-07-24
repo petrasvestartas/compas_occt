@@ -145,10 +145,10 @@ scripts/
 # cmakelists
 # ------------------------------------------------------------------------------
 
-# External dependencies
-# ext/**
-# external/
-# **/external/
+External dependencies
+ext/**
+external/
+**/external/
 
 # ------------------------------------------------------------------------------
 # cibuildwheel
