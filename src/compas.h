@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 #include <stdexcept>
+#include <array>
 
 // Eigen includes
 #include <Eigen/Core>

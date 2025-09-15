@@ -66,7 +66,8 @@ add_custom_target(occt_ext) # This two-target approach solves the issue of first
 if(NOT EXISTS "${OCCT_INSTALL_DIR}/my_include" OR NOT EXISTS "${OCCT_INSTALL_DIR}/my_static_libs")
     ExternalProject_Add(
         occt_download
-        URL https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V7_9_0.zip
+        # URL https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V7_9_1.zip
+        URL https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V8_0_0_rc2.zip
         PREFIX ${OCCT_PREFIX}
         SOURCE_DIR ${OCCT_SRC_DIR}
         BINARY_DIR ${OCCT_BUILD_DIR}
@@ -109,3 +110,4 @@ endfunction()
 add_nanobind_module(_primitives src/primitives.cpp)
 add_nanobind_module(_curves src/curves.cpp)
 add_nanobind_module(_nurbssurface src/nurbssurface.cpp)
+add_nanobind_module(_geometry src/geometry.cpp)
