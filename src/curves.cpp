@@ -1,164 +1,197 @@
-#include <nanobind/nanobind.h>
-#include <nanobind/stl/string.h>
-#include <nanobind/stl/vector.h>
+// curves.cpp - the `_curves` extension module: free functions backing OCCCurve,
+// OCCNurbsCurve (nurbscurve.cpp) and OCCCurve2d (curve2d.cpp).
+#include "compas.h"
+#include "occt.h"
 
-#include <iostream>
-#include <TColgp_Array1OfPnt.hxx>
-#include <TColStd_Array1OfReal.hxx>
-#include <TColStd_Array1OfInteger.hxx>
-#include <Geom_BSplineCurve.hxx>
+#include <optional>
+#include <utility>
+#include <stdexcept>
+#include <string>
+
+#include <Geom_Curve.hxx>
+#include <Geom_Geometry.hxx>
+#include <Geom_OffsetCurve.hxx>
+#include <Geom_Surface.hxx>
+#include <GeomAdaptor_Curve.hxx>
+#include <GCPnts_AbscissaPoint.hxx>
+#include <Bnd_Box.hxx>
+#include <BndLib_Add3dCurve.hxx>
+#include <GeomAPI_ProjectPointOnCurve.hxx>
+#include <GeomAPI_ExtremaCurveCurve.hxx>
+#include <GeomProjLib.hxx>
 #include <BRepBuilderAPI_MakeEdge.hxx>
-#include <TopoDS_Edge.hxx>
-#include <BRepTools.hxx>
-#include <Standard_Version.hxx>
 
-namespace nb = nanobind;
+// ---------------------------------------------------------------------------
+// OCCCurve (Geom_Curve)
+// ---------------------------------------------------------------------------
 
-// Helper function to create a sample NURBS curve
-Handle(Geom_BSplineCurve) create_sample_nurbs_curve() {
-    // Step 1: Define control points for the NURBS curve
-    const int numPoles = 6;
-    TColgp_Array1OfPnt poles(1, numPoles);
-    
-    // Create a sinusoidal wave shape with the control points
-    poles(1) = gp_Pnt(0, 0, 0);
-    poles(2) = gp_Pnt(10, 20, 0);
-    poles(3) = gp_Pnt(20, -10, 0);
-    poles(4) = gp_Pnt(30, 20, 0);
-    poles(5) = gp_Pnt(40, -10, 0);
-    poles(6) = gp_Pnt(50, 0, 0);
-    
-    // Step 2: Define weights for the NURBS curve
-    // Non-uniform weights make this a true NURBS curve as opposed to a B-spline curve
-    TColStd_Array1OfReal weights(1, numPoles);
-    weights(1) = 1.0;
-    weights(2) = 2.0; // Higher weight means the curve is pulled more toward this point
-    weights(3) = 0.8;
-    weights(4) = 2.0;
-    weights(5) = 0.8;
-    weights(6) = 1.0;
-    
-    // Step 3: Define knots and multiplicities
-    TColStd_Array1OfReal knots(1, 4);
-    knots(1) = 0.0;
-    knots(2) = 0.25;
-    knots(3) = 0.75;
-    knots(4) = 1.0;
-    
-    TColStd_Array1OfInteger mults(1, 4);
-    mults(1) = 4; // Multiplicity 4 at the start (curve passes through first control point)
-    mults(2) = 1;
-    mults(3) = 1;
-    mults(4) = 4; // Multiplicity 4 at the end (curve passes through last control point)
-    
-    // Step 4: Create the NURBS curve (degree 3 = cubic)
-    return new Geom_BSplineCurve(poles, weights, knots, mults, 3, false); // false = non-periodic curve
+static std::pair<double, double> curve_domain(const GeomCurve& c) {
+    return {c.curve->FirstParameter(), c.curve->LastParameter()};
 }
 
-// Function to sample points along a NURBS curve and return as a vector
-std::vector<std::vector<double>> sample_curve_points(int num_points) {
-    // Create the NURBS curve
-    Handle(Geom_BSplineCurve) curve = create_sample_nurbs_curve();
-    
-    // Sample points along the curve
-    std::vector<std::vector<double>> points;
-    
-    // Prevent division by zero
-    if (num_points <= 1) {
-        num_points = 2;
+static bool curve_is_closed(const GeomCurve& c) { return c.curve->IsClosed(); }
+static bool curve_is_periodic(const GeomCurve& c) { return c.curve->IsPeriodic(); }
+
+static GeomCurve curve_copy(const GeomCurve& c) {
+    return GeomCurve(opencascade::handle<Geom_Curve>::DownCast(c.curve->Copy()));
+}
+
+static void curve_transform(GeomCurve& c, const std::array<double, 12>& m) {
+    c.curve->Transform(to_trsf(m));
+}
+
+static void curve_reverse(GeomCurve& c) { c.curve->Reverse(); }
+
+// Bounds check folded into C++ (one nanobind call instead of a separate domain query).
+// std::invalid_argument is translated to a Python ValueError by nanobind.
+static inline void require_in_domain(const opencascade::handle<Geom_Curve>& c, double t) {
+    if (t < c->FirstParameter() || t > c->LastParameter())
+        throw std::invalid_argument("The parameter is not in the domain of the curve.");
+}
+
+static Triple curve_point_at(const GeomCurve& c, double t) {
+    const double a = c.curve->FirstParameter(), b = c.curve->LastParameter();
+    if (t < a || t > b)
+        throw std::invalid_argument("The parameter is not in the domain of the curve. t = " + std::to_string(t) +
+                                    ", domain: (" + std::to_string(a) + ", " + std::to_string(b) + ")");
+    return from_pnt(c.curve->Value(t));
+}
+
+// Bulk evaluation -> zero-copy numpy (n,3); one call instead of n for discretisation.
+static nb::ndarray<nb::numpy, double> curve_points_at(const GeomCurve& c, const std::vector<double>& ts) {
+    std::vector<double> d;
+    d.reserve(ts.size() * 3);
+    for (double t : ts) {
+        const gp_Pnt p = c.curve->Value(t);
+        d.push_back(p.X());
+        d.push_back(p.Y());
+        d.push_back(p.Z());
     }
-    
-    for (int i = 0; i < num_points; i++) {
-        double param = static_cast<double>(i) / (num_points - 1);
-        gp_Pnt point = curve->Value(param);
-        
-        // Create a vector for this point [x, y, z]
-        std::vector<double> point_coords = {point.X(), point.Y(), point.Z()};
-        points.push_back(point_coords);
+    return to_numpy(std::move(d), {ts.size(), 3});
+}
+
+static Triple curve_tangent_at(const GeomCurve& c, double t) {
+    require_in_domain(c.curve, t);
+    gp_Pnt p;
+    gp_Vec u;
+    c.curve->D1(t, p, u);
+    return from_vec(u);
+}
+
+static Triple curve_curvature_at(const GeomCurve& c, double t) {
+    require_in_domain(c.curve, t);
+    gp_Pnt p;
+    gp_Vec u, v;
+    c.curve->D2(t, p, u, v);
+    return from_vec(v);
+}
+
+// returns (point, uvec, vvec) for building a compas Frame
+static std::tuple<Triple, Triple, Triple> curve_frame_at(const GeomCurve& c, double t) {
+    require_in_domain(c.curve, t);
+    gp_Pnt p;
+    gp_Vec u, v;
+    c.curve->D2(t, p, u, v);
+    return {from_pnt(p), from_vec(u), from_vec(v)};
+}
+
+static double curve_parameter_at_distance(const GeomCurve& c, double t, double distance, double precision) {
+    GeomAdaptor_Curve adaptor(c.curve);
+    GCPnts_AbscissaPoint a(adaptor, distance, t, precision);
+    return a.Parameter();
+}
+
+static std::pair<Triple, Triple> curve_aabb(const GeomCurve& c, double precision) {
+    Bnd_Box box;
+    GeomAdaptor_Curve adaptor(c.curve);
+    BndLib_Add3dCurve::Add(adaptor, precision, box);
+    return {from_pnt(box.CornerMin()), from_pnt(box.CornerMax())};
+}
+
+static double curve_length(const GeomCurve& c, double precision) {
+    GeomAdaptor_Curve adaptor(c.curve);
+    return GCPnts_AbscissaPoint::Length(adaptor, precision);
+}
+
+// (nearest point, parameter) or nullopt if the projection failed (start/end fallback in Python)
+static std::optional<std::pair<Triple, double>> curve_closest_point(const GeomCurve& c, const Triple& point) {
+    GeomAPI_ProjectPointOnCurve projector(to_pnt(point), c.curve);
+    try {
+        gp_Pnt np = projector.NearestPoint();
+        return std::make_pair(from_pnt(np), projector.LowerDistanceParameter());
+    } catch (const Standard_Failure&) {
+        return std::nullopt;
     }
-    
-    return points;
 }
 
-// Test function to verify OCCT is properly linked
-std::string test_occt_nurbs() {
-    std::stringstream output;
-    output << "OCCT NURBS Curve Example" << std::endl;
-    output << "Using Open CASCADE Technology version: " 
-           << OCC_VERSION_STRING_EXT << std::endl;
-    
-    // Step 1: Define control points for the NURBS curve
-    const int numPoles = 6;
-    TColgp_Array1OfPnt poles(1, numPoles);
-    
-    // Create a sinusoidal wave shape with the control points
-    poles(1) = gp_Pnt(0, 0, 0);
-    poles(2) = gp_Pnt(10, 20, 0);
-    poles(3) = gp_Pnt(20, -10, 0);
-    poles(4) = gp_Pnt(30, 20, 0);
-    poles(5) = gp_Pnt(40, -10, 0);
-    poles(6) = gp_Pnt(50, 0, 0);
-    
-    // Step 2: Define weights for the NURBS curve
-    // Non-uniform weights make this a true NURBS curve as opposed to a B-spline curve
-    TColStd_Array1OfReal weights(1, numPoles);
-    weights(1) = 1.0;
-    weights(2) = 2.0; // Higher weight means the curve is pulled more toward this point
-    weights(3) = 0.8;
-    weights(4) = 2.0;
-    weights(5) = 0.8;
-    weights(6) = 1.0;
-    
-    // Step 3: Define knots and multiplicities
-    // For a cubic (degree 3) curve with 6 control points, we need 6 + 3 + 1 = 10 knots
-    // But we'll use a clamped knot vector with multiplicity 4 at the ends, leading to 6 knot values
-    TColStd_Array1OfReal knots(1, 4);
-    knots(1) = 0.0;
-    knots(2) = 0.25;
-    knots(3) = 0.75;
-    knots(4) = 1.0;
-    
-    TColStd_Array1OfInteger mults(1, 4);
-    mults(1) = 4; // Multiplicity 4 at the start (curve passes through first control point)
-    mults(2) = 1;
-    mults(3) = 1;
-    mults(4) = 4; // Multiplicity 4 at the end (curve passes through last control point)
-    
-    // Step 4: Create the NURBS curve
-    // Degree 3 (cubic)
-    Handle(Geom_BSplineCurve) nurbsCurve = new Geom_BSplineCurve(
-        poles, weights, knots, mults, 3, false); // false = non-periodic curve
-    
-    // Print curve information
-    output << "NURBS curve created with:" << std::endl;
-    output << "- Number of control points: " << nurbsCurve->NbPoles() << std::endl;
-    output << "- Degree: " << nurbsCurve->Degree() << std::endl;
-    output << "- Number of knots: " << nurbsCurve->NbKnots() << std::endl;
-    output << "- Is rational: " << (nurbsCurve->IsRational() ? "Yes" : "No") << std::endl;
-    
-    // Create topological edge from the curve
-    TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(nurbsCurve);
-    
-    // Save the edge to BREP file
-    BRepTools::Write(edge, "nurbs_curve.brep");
-    
-    output << "NURBS curve created successfully!" << std::endl;
-    output << "Result saved as nurbs_curve.brep" << std::endl;
-    
-    return output.str();
+// (u, v, distance)
+static std::tuple<double, double, double> curve_closest_parameters_curve(const GeomCurve& a, const GeomCurve& b) {
+    GeomAPI_ExtremaCurveCurve extrema(a.curve, b.curve);
+    double u = 0.0, v = 0.0;
+    extrema.LowerDistanceParameters(u, v);
+    return {u, v, extrema.LowerDistance()};
 }
 
-NB_MODULE(_curves, m) {
-    m.doc() = "OCCT curve testing module";
-    
-    m.def("test_occt_nurbs", &test_occt_nurbs, "Test OCCT NURBS curve creation");
-    
-    // Add the sample_curve_points function to the module
-    m.def("sample_curve_points", &sample_curve_points, nb::arg("num_points") = 50,
-         "Sample points along a NURBS curve and return as nested list of coordinates");
-    
-    // Get OCCT version
-    m.def("get_occt_version", []() { 
-        return std::string(OCC_VERSION_STRING_EXT); 
-    }, "Return the OCCT version");
+// (point_a, point_b, distance)
+static std::tuple<Triple, Triple, double> curve_closest_points_curve(const GeomCurve& a, const GeomCurve& b) {
+    gp_Pnt pa, pb;
+    GeomAPI_ExtremaCurveCurve extrema(a.curve, b.curve);
+    extrema.NearestPoints(pa, pb);
+    return {from_pnt(pa), from_pnt(pb), extrema.LowerDistance()};
 }
+
+// abscissa division parameters (interior); Python prepends/appends domain ends + optional points
+static std::vector<double> curve_abscissa_params(const GeomCurve& c, double length, int count, double precision) {
+    GeomAdaptor_Curve adaptor(c.curve);
+    std::vector<double> params;
+    double t = c.curve->FirstParameter();
+    for (int i = 0; i < count - 1; ++i) {
+        GCPnts_AbscissaPoint a(adaptor, length, t, precision);
+        t = a.Parameter();
+        params.push_back(t);
+    }
+    return params;
+}
+
+static GeomCurve curve_projected(const GeomCurve& c, const GeomSurface& s) {
+    return GeomCurve(GeomProjLib::Project(c.curve, s.surface));
+}
+
+static Geom2dCurve curve_embedded(const GeomCurve& c, const GeomSurface& s) {
+    return Geom2dCurve(GeomProjLib::Curve2d(c.curve, s.surface));
+}
+
+static GeomCurve curve_offset(const GeomCurve& c, double distance, const Triple& direction) {
+    opencascade::handle<Geom_OffsetCurve> oc = new Geom_OffsetCurve(c.curve, distance, to_dir(direction));
+    return GeomCurve(oc);
+}
+
+static Shape curve_to_edge(const GeomCurve& c) {
+    return Shape(BRepBuilderAPI_MakeEdge(c.curve).Shape());
+}
+
+void register_curves(nb::module_& m) {
+    m.def("curve_domain", &curve_domain);
+    m.def("curve_is_closed", &curve_is_closed);
+    m.def("curve_is_periodic", &curve_is_periodic);
+    m.def("curve_copy", &curve_copy);
+    m.def("curve_transform", &curve_transform);
+    m.def("curve_reverse", &curve_reverse);
+    m.def("curve_point_at", &curve_point_at);
+    m.def("curve_points_at", &curve_points_at);
+    m.def("curve_tangent_at", &curve_tangent_at);
+    m.def("curve_curvature_at", &curve_curvature_at);
+    m.def("curve_frame_at", &curve_frame_at);
+    m.def("curve_parameter_at_distance", &curve_parameter_at_distance);
+    m.def("curve_aabb", &curve_aabb);
+    m.def("curve_length", &curve_length);
+    m.def("curve_closest_point", &curve_closest_point);
+    m.def("curve_closest_parameters_curve", &curve_closest_parameters_curve);
+    m.def("curve_closest_points_curve", &curve_closest_points_curve);
+    m.def("curve_abscissa_params", &curve_abscissa_params);
+    m.def("curve_projected", &curve_projected);
+    m.def("curve_embedded", &curve_embedded);
+    m.def("curve_offset", &curve_offset);
+    m.def("curve_to_edge", &curve_to_edge);
+}
+

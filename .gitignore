@@ -3,8 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# C extensions
+# C extensions (compiled object/library intermediates live under build/, already ignored;
+# *.obj is intentionally NOT ignored here so Wavefront .obj mesh data can be tracked)
 *.so
+*.pyd
+*.dll
+*.dylib
 
 # Distribution / packaging
 .Python
@@ -66,6 +70,11 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+
+# local dev build helpers (machine-specific vcvars/python paths) + root scratch
+/build_stage6.bat
+/build_uv.bat
+/_*.py
 
 # PyBuilder
 target/

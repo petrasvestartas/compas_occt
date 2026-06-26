@@ -1,273 +1,203 @@
+// nurbssurface.cpp - free functions backing OCCNurbsSurface (Geom_BSplineSurface) and
+// the ControlPoints helper.
+//
+// Pole-grid layout convention (must match compas_occ's points2_from_array2(Poles())):
+//   poles2 has shape [NbVPoles][NbUPoles] with poles2[v][u] == Pole(u+1, v+1).
+//   from_parameters receives the user grid in the same [v][u] layout.
 #include "compas.h"
-#include <nanobind/stl/tuple.h>
-#include <nanobind/stl/unique_ptr.h>
-#include <nanobind/stl/vector.h>
+#include "occt.h"
+
+#include <Geom_BSplineSurface.hxx>
+#include <Geom_Plane.hxx>
 #include <TColgp_Array2OfPnt.hxx>
 #include <TColStd_Array2OfReal.hxx>
 #include <TColStd_Array1OfReal.hxx>
 #include <TColStd_Array1OfInteger.hxx>
-#include <Geom_BSplineSurface.hxx>
-#include <BRepBuilderAPI_MakeFace.hxx>
-#include <TopoDS_Face.hxx>
-#include <BRepMesh_IncrementalMesh.hxx>
-#include <BRep_Tool.hxx>
-#include <TopLoc_Location.hxx>
-#include <Poly_Triangulation.hxx>
+#include <GeomAbs_Shape.hxx>
+#include <GeomAPI_PointsToBSplineSurface.hxx>
+#include <GeomFill_BSplineCurves.hxx>
+#include <GeomFill_FillingStyle.hxx>
+#include <Geom_BSplineCurve.hxx>
+#include <gp_Pln.hxx>
 
-// For timing measurements
-#include <chrono>
-#include <iostream>
+using Grid = std::vector<std::vector<Triple>>;
+using FGrid = std::vector<std::vector<double>>;
 
-// For parallel processing
-#include <thread>
-#include <vector>
-#include <mutex>
-#include <algorithm>
-#include <functional>
-
-struct NB_Geom_BSplineSurface {
-    Handle(Geom_BSplineSurface) surface;
-    NB_Geom_BSplineSurface(Handle(Geom_BSplineSurface) surface) : surface(surface) {}
-};
-
-std::unique_ptr<NB_Geom_BSplineSurface> create_nurbs_surface_from_points(
-    const nb::ndarray<double, nb::numpy>& points, 
-    int rows, int cols,
-    int degree_u = 3, 
-    int degree_v = 3) {
-    
-    // Validate dimensions
-    if (rows < 2 || cols < 2) {
-        throw std::runtime_error("Grid dimensions must be at least 2x2");
-    }
-    
-    if (points.size() != rows * cols * 3) {
-        throw std::runtime_error("Points array size does not match grid dimensions");
-    }
-    
-    // Adjust degrees if needed (must be less than number of points)
-    if (cols <= degree_u) {
-        degree_u = cols - 1;
-    }
-    
-    if (rows <= degree_v) {
-        degree_v = rows - 1;
-    }
-    
-    // Calculate orders (degree + 1)
-    int u_order = degree_u + 1;
-    int v_order = degree_v + 1;
-    
-    // Create poles array
-    TColgp_Array2OfPnt poles(1, rows, 1, cols);
-    TColStd_Array2OfReal weights(1, rows, 1, cols);
-    
-    // Fill in poles and weights
-    for (int i = 0; i < rows; i++) {
-        for (int j = 0; j < cols; j++) {
-            int idx = i * cols + j;
-            poles.SetValue(i+1, j+1, gp_Pnt(
-                points.data()[idx*3],
-                points.data()[idx*3+1],
-                points.data()[idx*3+2]));
-            weights.SetValue(i+1, j+1, 1.0); // All weights 1.0
-        }
-    }
-    
-    // Create knots and multiplicities for U direction
-    int x_u = cols - u_order;
-    TColStd_Array1OfReal knots_u(1, 2 + x_u);
-    TColStd_Array1OfInteger mults_u(1, 2 + x_u);
-    
-    // First knot with multiplicity = u_order
-    knots_u.SetValue(1, 0.0);
-    mults_u.SetValue(1, u_order);
-    
-    // Middle knots with multiplicity = 1
-    for (int i = 0; i < x_u; i++) {
-        knots_u.SetValue(i + 2, float(i + 1));
-        mults_u.SetValue(i + 2, 1);
-    }
-    
-    // Last knot with multiplicity = u_order
-    knots_u.SetValue(2 + x_u, float(1 + x_u));
-    mults_u.SetValue(2 + x_u, u_order);
-    
-    // Create knots and multiplicities for V direction
-    int x_v = rows - v_order;
-    TColStd_Array1OfReal knots_v(1, 2 + x_v);
-    TColStd_Array1OfInteger mults_v(1, 2 + x_v);
-    
-    // First knot with multiplicity = v_order
-    knots_v.SetValue(1, 0.0);
-    mults_v.SetValue(1, v_order);
-    
-    // Middle knots with multiplicity = 1
-    for (int i = 0; i < x_v; i++) {
-        knots_v.SetValue(i + 2, float(i + 1));
-        mults_v.SetValue(i + 2, 1);
-    }
-    
-    // Last knot with multiplicity = v_order
-    knots_v.SetValue(2 + x_v, float(1 + x_v));
-    mults_v.SetValue(2 + x_v, v_order);
-    
-    // Create the BSpline surface
-    Handle(Geom_BSplineSurface) surface = new Geom_BSplineSurface(
-        poles, weights, knots_u, knots_v, 
-        mults_u, mults_v, degree_u, degree_v,
-        Standard_False, Standard_False  // Not periodic
-    );
-    
-    // Return as a unique_ptr to NB_Geom_BSplineSurface
-    return std::make_unique<NB_Geom_BSplineSurface>(surface);
+static opencascade::handle<Geom_BSplineSurface> as_bspline(const GeomSurface& s) {
+    return opencascade::handle<Geom_BSplineSurface>::DownCast(s.surface);
 }
 
-Eigen::Matrix<double, Eigen::Dynamic, 3, Eigen::RowMajor> get_control_points(const NB_Geom_BSplineSurface& nurbs_surface) {
-    const Handle(Geom_BSplineSurface)& surface = nurbs_surface.surface;
-    int rows = surface->NbUPoles();
-    int cols = surface->NbVPoles();
-    
-    Eigen::Matrix<double, Eigen::Dynamic, 3, Eigen::RowMajor> points(rows * cols, 3);
-    
-    for (int i = 1; i <= rows; i++) {
-        for (int j = 1; j <= cols; j++) {
-            gp_Pnt p = surface->Pole(i, j);
-            int idx = (i-1) * cols + (j-1);
-            
-            points(idx, 0) = p.X();
-            points(idx, 1) = p.Y();
-            points(idx, 2) = p.Z();
-        }
-    }
-    
-    return points;
+static opencascade::handle<Geom_BSplineCurve> curve_as_bspline(const GeomCurve& c) {
+    return opencascade::handle<Geom_BSplineCurve>::DownCast(c.curve);
 }
 
-// 4. Get isocurves on the surface as polylines
-std::vector<Eigen::Matrix<double, Eigen::Dynamic, 3, Eigen::RowMajor>> get_isocurves(
-    const NB_Geom_BSplineSurface& nurbs_surface,
-    bool u_direction,
-    int divisions,
-    int points_per_curve=50) {
-    const Handle(Geom_BSplineSurface)& surface = nurbs_surface.surface;
-    
-    // Get the parameter range
-    double u_min, u_max, v_min, v_max;
-    surface->Bounds(u_min, u_max, v_min, v_max);
-    
-    // Create vector to hold polylines
-    std::vector<Eigen::Matrix<double, Eigen::Dynamic, 3, Eigen::RowMajor>> isocurves;
-    
-    if (u_direction) {
-        // Create isocurves at constant v (horizontal curves)
-        for (int i = 0; i < divisions+1; i++) {
-            // Calculate v parameter
-            double v = v_min + (v_max - v_min) * static_cast<double>(i) / divisions;
-            
-            // Create a polyline with points along the curve
-            Eigen::Matrix<double, Eigen::Dynamic, 3, Eigen::RowMajor> curve_points(points_per_curve, 3);
-            
-            for (int j = 0; j < points_per_curve; j++) {
-                double u = u_min + (u_max - u_min) * static_cast<double>(j) / (points_per_curve - 1);
-                gp_Pnt point = surface->Value(u, v);
-                
-                curve_points(j, 0) = point.X();
-                curve_points(j, 1) = point.Y();
-                curve_points(j, 2) = point.Z();
-            }
-            
-            isocurves.push_back(curve_points);
-        }
+// Build a (1..nu, 1..nv) pole array from a [v][u] user grid.
+static TColgp_Array2OfPnt poles_from_grid(const Grid& points) {
+    const int nv = static_cast<int>(points.size());
+    const int nu = static_cast<int>(points[0].size());
+    TColgp_Array2OfPnt poles(1, nu, 1, nv);
+    for (int v = 0; v < nv; ++v)
+        for (int u = 0; u < nu; ++u)
+            poles.SetValue(u + 1, v + 1, to_pnt(points[v][u]));
+    return poles;
+}
+
+static GeomSurface nurbssurface_from_parameters(
+    const Grid& points,
+    const FGrid& weights,
+    const std::vector<double>& knots_u,
+    const std::vector<double>& knots_v,
+    const std::vector<int>& mults_u,
+    const std::vector<int>& mults_v,
+    int degree_u,
+    int degree_v,
+    bool is_periodic_u,
+    bool is_periodic_v) {
+    const int nv = static_cast<int>(points.size());
+    const int nu = static_cast<int>(points[0].size());
+
+    TColgp_Array2OfPnt poles = poles_from_grid(points);
+    TColStd_Array2OfReal w(1, nu, 1, nv);
+    for (int v = 0; v < nv; ++v)
+        for (int u = 0; u < nu; ++u)
+            w.SetValue(u + 1, v + 1, weights[v][u]);
+
+    TColStd_Array1OfReal uk(1, static_cast<int>(knots_u.size()));
+    TColStd_Array1OfInteger um(1, static_cast<int>(mults_u.size()));
+    for (int i = 0; i < static_cast<int>(knots_u.size()); ++i) {
+        uk.SetValue(i + 1, knots_u[i]);
+        um.SetValue(i + 1, mults_u[i]);
+    }
+    TColStd_Array1OfReal vk(1, static_cast<int>(knots_v.size()));
+    TColStd_Array1OfInteger vm(1, static_cast<int>(mults_v.size()));
+    for (int i = 0; i < static_cast<int>(knots_v.size()); ++i) {
+        vk.SetValue(i + 1, knots_v[i]);
+        vm.SetValue(i + 1, mults_v[i]);
+    }
+
+    opencascade::handle<Geom_BSplineSurface> srf =
+        new Geom_BSplineSurface(poles, w, uk, vk, um, vm, degree_u, degree_v, is_periodic_u, is_periodic_v);
+    return GeomSurface(srf);
+}
+
+static GeomSurface nurbssurface_from_interpolation(const Grid& points, double precision) {
+    TColgp_Array2OfPnt poles = poles_from_grid(points);
+    GeomAPI_PointsToBSplineSurface builder(poles, 3, 8, GeomAbs_C2, precision);
+    return GeomSurface(builder.Surface());
+}
+
+static GeomSurface nurbssurface_from_plane(const Triple& point, const Triple& normal) {
+    opencascade::handle<Geom_Plane> plane = new Geom_Plane(gp_Pln(to_pnt(point), to_dir(normal)));
+    return GeomSurface(plane);
+}
+
+static GeomSurface nurbssurface_from_fill(const std::vector<GeomCurve>& curves, const std::string& style) {
+    GeomFill_FillingStyle occ_style = GeomFill_StretchStyle;
+    if (style == "coons")
+        occ_style = GeomFill_CoonsStyle;
+    else if (style == "curved")
+        occ_style = GeomFill_CurvedStyle;
+
+    GeomFill_BSplineCurves fill;
+    if (curves.size() == 4) {
+        fill = GeomFill_BSplineCurves(curve_as_bspline(curves[0]), curve_as_bspline(curves[1]),
+                                      curve_as_bspline(curves[2]), curve_as_bspline(curves[3]), occ_style);
+    } else if (curves.size() == 3) {
+        fill = GeomFill_BSplineCurves(curve_as_bspline(curves[0]), curve_as_bspline(curves[1]),
+                                      curve_as_bspline(curves[2]), occ_style);
     } else {
-        // Create isocurves at constant u (vertical curves)
-        for (int i = 0; i <= divisions; i++) {
-            // Calculate u parameter
-            double u = u_min + (u_max - u_min) * static_cast<double>(i) / divisions;
-            
-            // Create a polyline with points along the curve
-            Eigen::Matrix<double, Eigen::Dynamic, 3, Eigen::RowMajor> curve_points(points_per_curve, 3);
-            
-            for (int j = 0; j < points_per_curve; j++) {
-                double v = v_min + (v_max - v_min) * static_cast<double>(j) / (points_per_curve - 1);
-                gp_Pnt point = surface->Value(u, v);
-                
-                curve_points(j, 0) = point.X();
-                curve_points(j, 1) = point.Y();
-                curve_points(j, 2) = point.Z();
-            }
-            
-            isocurves.push_back(curve_points);
+        fill = GeomFill_BSplineCurves(curve_as_bspline(curves[0]), curve_as_bspline(curves[1]), occ_style);
+    }
+    return GeomSurface(fill.Surface());
+}
+
+// poles2[v][u] = Pole(u+1, v+1) -> zero-copy numpy array of shape (NbVPoles, NbUPoles, 3)
+static nb::ndarray<nb::numpy, double> nurbssurface_poles2(const GeomSurface& s) {
+    auto bs = as_bspline(s);
+    const int nu = bs->NbUPoles();
+    const int nv = bs->NbVPoles();
+    std::vector<double> d;
+    d.reserve(static_cast<size_t>(nv) * nu * 3);
+    for (int v = 1; v <= nv; ++v)
+        for (int u = 1; u <= nu; ++u) {
+            const gp_Pnt p = bs->Pole(u, v);
+            d.push_back(p.X());
+            d.push_back(p.Y());
+            d.push_back(p.Z());
         }
-    }
-    
-    return isocurves;
+    return to_numpy(std::move(d), {static_cast<size_t>(nv), static_cast<size_t>(nu), 3});
 }
 
-// Original function for backward compatibility
-std::tuple<Eigen::Matrix<double, Eigen::Dynamic, 3, Eigen::RowMajor>, 
-          Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor>> get_mesh(
-    const NB_Geom_BSplineSurface& nurbs_surface, 
-    double deflection = 0.001) {
-    
-    const Handle(Geom_BSplineSurface)& surface = nurbs_surface.surface;
-    
-    // Create a topological face from the surface
-    TopoDS_Face face = BRepBuilderAPI_MakeFace(surface, 1e-6);
-    BRepMesh_IncrementalMesh mesh(face, deflection);
-    TopLoc_Location loc;
-    Handle(Poly_Triangulation) triangulation = BRep_Tool::Triangulation(face, loc);
-    
-    Eigen::Matrix<double, Eigen::Dynamic, 3, Eigen::RowMajor> vertices(triangulation->NbNodes(), 3);
-    double* vertices_data = vertices.data();
-    for (int i = 1; i <= triangulation->NbNodes(); i++) {
-        gp_Pnt p = triangulation->InternalNodes().Value(i-1).Transformed(loc);
-        *vertices_data++ = p.X();
-        *vertices_data++ = p.Y();
-        *vertices_data++ = p.Z();
-    }
-    
-    Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor> triangles(triangulation->NbTriangles(), 3);
-    int* triangles_data = triangles.data();
-    for (int i = 1; i <= triangulation->NbTriangles(); i++) {
-        int n1, n2, n3;
-        triangulation->InternalTriangles().Value(i).Get(n1, n2, n3);
-        *triangles_data++ = n1 - 1;
-        *triangles_data++ = n2 - 1;
-        *triangles_data++ = n3 - 1;
-    }
-    
-    return std::make_tuple(std::move(vertices), std::move(triangles));
+// weights2[v][u] = Weight(u+1, v+1) (1.0 for non-rational), shape [NbVPoles][NbUPoles]
+static FGrid nurbssurface_weights2(const GeomSurface& s) {
+    auto bs = as_bspline(s);
+    const int nu = bs->NbUPoles();
+    const int nv = bs->NbVPoles();
+    FGrid out(nv, std::vector<double>(nu));
+    for (int v = 1; v <= nv; ++v)
+        for (int u = 1; u <= nu; ++u)
+            out[v - 1][u - 1] = bs->Weight(u, v);
+    return out;
 }
 
-NB_MODULE(_nurbssurface, m) {
-    m.doc() = "OCCT NURBS surface functions";
-    
-    nb::class_<NB_Geom_BSplineSurface>(m, "BSplineSurface");
-    
-    m.def("create_nurbs_surface_from_points", 
-        &create_nurbs_surface_from_points,
-        nb::arg("points"), 
-        nb::arg("rows"),
-        nb::arg("cols"),
-        nb::arg("degree_u") = 3, 
-        nb::arg("degree_v") = 3);
-    
-    m.def("get_control_points", 
-        &get_control_points,
-        nb::arg("surface"));
-    
-    m.def("get_mesh", 
-        &get_mesh,
-        nb::arg("surface"), 
-        nb::arg("deflection") = 0.01,
-        "Triangulate a NURBS surface into a mesh with vertices and faces");
-    
-    m.def("get_isocurves",
-        &get_isocurves,
-        nb::arg("surface"),
-        nb::arg("u_direction"),
-        nb::arg("divisions"),
-        nb::arg("points_per_curve") = 50,
-        "Extract isocurves from a NURBS surface in U or V direction");
+static Triple nurbssurface_pole(const GeomSurface& s, int u, int v) {
+    return from_pnt(as_bspline(s)->Pole(u, v));
+}
+
+static void nurbssurface_set_pole(GeomSurface& s, int u, int v, const Triple& point) {
+    as_bspline(s)->SetPole(u, v, to_pnt(point));
+}
+
+static int nurbssurface_nb_upoles(const GeomSurface& s) { return as_bspline(s)->NbUPoles(); }
+static int nurbssurface_nb_vpoles(const GeomSurface& s) { return as_bspline(s)->NbVPoles(); }
+static int nurbssurface_degree_u(const GeomSurface& s) { return as_bspline(s)->UDegree(); }
+static int nurbssurface_degree_v(const GeomSurface& s) { return as_bspline(s)->VDegree(); }
+
+static std::vector<double> nurbssurface_uknots(const GeomSurface& s) {
+    auto bs = as_bspline(s);
+    std::vector<double> out;
+    for (int i = 1; i <= bs->NbUKnots(); ++i) out.push_back(bs->UKnot(i));
+    return out;
+}
+static std::vector<double> nurbssurface_vknots(const GeomSurface& s) {
+    auto bs = as_bspline(s);
+    std::vector<double> out;
+    for (int i = 1; i <= bs->NbVKnots(); ++i) out.push_back(bs->VKnot(i));
+    return out;
+}
+static std::vector<int> nurbssurface_umults(const GeomSurface& s) {
+    auto bs = as_bspline(s);
+    std::vector<int> out;
+    for (int i = 1; i <= bs->NbUKnots(); ++i) out.push_back(bs->UMultiplicity(i));
+    return out;
+}
+static std::vector<int> nurbssurface_vmults(const GeomSurface& s) {
+    auto bs = as_bspline(s);
+    std::vector<int> out;
+    for (int i = 1; i <= bs->NbVKnots(); ++i) out.push_back(bs->VMultiplicity(i));
+    return out;
+}
+static bool nurbssurface_is_rational(const GeomSurface& s) {
+    auto bs = as_bspline(s);
+    return bs->IsURational() || bs->IsVRational();
+}
+
+void register_nurbssurface(nb::module_& m) {
+    m.def("nurbssurface_from_parameters", &nurbssurface_from_parameters);
+    m.def("nurbssurface_from_interpolation", &nurbssurface_from_interpolation);
+    m.def("nurbssurface_from_plane", &nurbssurface_from_plane);
+    m.def("nurbssurface_from_fill", &nurbssurface_from_fill);
+    m.def("nurbssurface_poles2", &nurbssurface_poles2);
+    m.def("nurbssurface_weights2", &nurbssurface_weights2);
+    m.def("nurbssurface_pole", &nurbssurface_pole);
+    m.def("nurbssurface_set_pole", &nurbssurface_set_pole);
+    m.def("nurbssurface_nb_upoles", &nurbssurface_nb_upoles);
+    m.def("nurbssurface_nb_vpoles", &nurbssurface_nb_vpoles);
+    m.def("nurbssurface_degree_u", &nurbssurface_degree_u);
+    m.def("nurbssurface_degree_v", &nurbssurface_degree_v);
+    m.def("nurbssurface_uknots", &nurbssurface_uknots);
+    m.def("nurbssurface_vknots", &nurbssurface_vknots);
+    m.def("nurbssurface_umults", &nurbssurface_umults);
+    m.def("nurbssurface_vmults", &nurbssurface_vmults);
+    m.def("nurbssurface_is_rational", &nurbssurface_is_rational);
 }

@@ -1,0 +1,204 @@
+site_name: COMPAS OCCT
+site_url: https://petrasvestartas.github.io/compas_occt/
+
+repo_name: petrasvestartas/compas_occt
+repo_url: https://github.com/petrasvestartas/compas_occt/
+
+copyright: Copyright &copy; Petras Vestartas
+
+extra:
+  homepage: https://petrasvestartas.github.io/compas_occt/
+  version:
+    provider: mike
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: light blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: light blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Roboto
+    code: Roboto Mono
+  logo: assets/logos/compas_icon_white.png
+  favicon: public/favicon.ico
+  features:
+    - content.code.copy
+    - content.footnote.tooltips
+    - navigation.expand
+    - navigation.footer
+    - navigation.indexes
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - toc.follow
+
+markdown_extensions:
+  - abbr
+  - attr_list
+  - admonition
+  - callouts:
+      strip_period: no
+  - footnotes
+  - md_in_html
+  - pymdownx.blocks.caption
+  - pymdownx.caret
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      check_paths: true
+  - pymdownx.superfences
+  - toc:
+      permalink: "¤"
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [src] # search packages in the src folder
+          inventories:
+            - https://docs.python.org/3/objects.inv
+            - https://compas.dev/compas/latest/objects.inv
+          options:
+            allow_inspection: true
+            backlinks: tree
+            docstring_options:
+              ignore_init_summary: true
+              trim_doctest_flags: true
+            docstring_style: numpy
+            docstring_section_style: list
+            filters: public
+            group_by_category: true
+            heading_level: 1
+            inheritance_diagram_direction: TD
+            inherited_members: false
+            line_length: 88
+            merge_init_into_class: true
+            modernize_annotations: true
+            parameter_headings: false
+            preload_modules: [mkdocstrings, compas]
+            relative_crossrefs: true
+            scoped_crossrefs: true
+            separate_signature: true
+            show_bases: false
+            show_category_heading: true
+            show_docstring_attributes: true
+            show_docstring_functions: true
+            show_docstring_modules: false
+            show_if_no_docstring: false
+            show_inheritance_diagram: false
+            show_root_heading: true
+            show_root_full_path: true
+            show_signature: true
+            show_signature_annotations: true
+            show_signature_type_parameters: true
+            show_source: false
+            show_submodules: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            signature_crossrefs: true
+            summary:
+              modules: false
+            type_parameter_headings: true
+            unwrap_annotated: true
+
+nav:
+  - Introduction: index.md
+  - Installation: installation.md
+  - Tutorial: tutorial.md
+  - Examples:
+      - Breps:
+          - Brep Booleans: examples/breps/brep_booleans.md
+          - Brep Exchange: examples/breps/brep_exchange.md
+          - Brep Explorer: examples/breps/brep_explorer.md
+          - Brep Fillet: examples/breps/brep_fillet.md
+          - Brep From Booleans: examples/breps/brep_from_booleans.md
+          - Brep From Extrusion: examples/breps/brep_from_extrusion.md
+          - Brep From Loft: examples/breps/brep_from_loft.md
+          - Brep From Mesh: examples/breps/brep_from_mesh.md
+          - Brep From Shape: examples/breps/brep_from_shape.md
+          - Brep Intersections: examples/breps/brep_intersections.md
+          - Brep Overlap: examples/breps/brep_overlap.md
+          - Brep Serialisation: examples/breps/brep_serialisation.md
+          - Brep Merge Coplanar Faces: examples/breps/brep_simplify.md
+          - Brep Slice: examples/breps/brep_slice.md
+          - Brep Split: examples/breps/brep_split.md
+          - Brep Step Attributes: examples/breps/brep_step_attributes.md
+          - Brep Trim: examples/breps/brep_trim.md
+          - Brep With Hole: examples/breps/brep_with_hole.md
+          - Brep With Holes: examples/breps/brep_with_holes.md
+          - Brep With Holes 2: examples/breps/brep_with_holes2.md
+      - Curves:
+          - Curve Closest Parameters Curve: examples/curves/curve_closest_parameters_curve.md
+          - Curve Closest Point: examples/curves/curve_closest_point.md
+          - Curve Comparison 1: examples/curves/curve_comparison1.md
+          - Curve Comparison 2: examples/curves/curve_comparison2.md
+          - Curve Divide: examples/curves/curve_divide.md
+          - Curve From Circle: examples/curves/curve_from_circle.md
+          - Curve From Ellipse: examples/curves/curve_from_ellipse.md
+          - Curve From Interpolation: examples/curves/curve_from_interpolation.md
+          - Curve From Line: examples/curves/curve_from_line.md
+          - Curve From Parameters: examples/curves/curve_from_parameters.md
+          - Curve From Points: examples/curves/curve_from_points.md
+          - Curve Joining: examples/curves/curve_joining.md
+          - Curve Segmentation: examples/curves/curve_segmentation.md
+      - Surfaces:
+          - Surface AABB: examples/surfaces/surface_aabb.md
+          - Surface Frames: examples/surfaces/surface_frames.md
+          - Surface From Fill: examples/surfaces/surface_from_fill.md
+          - Surface From Meshgrid: examples/surfaces/surface_from_meshgrid.md
+          - Surface From Parameters: examples/surfaces/surface_from_parameters.md
+          - Surface From Points: examples/surfaces/surface_from_points.md
+          - Surface Intersections With Line: examples/surfaces/surface_intersections_with_line.md
+          - Surface Isocurves: examples/surfaces/surface_isocurves.md
+          - Surface Json Data: examples/surfaces/surface_jsondata.md
+          - Surface OBB: examples/surfaces/surface_obb.md
+          - Surface Random: examples/surfaces/surface_random.md
+          - Surface Space Points: examples/surfaces/surface_spacepoints.md
+  - API:
+      - Geometry:
+          - OCCCurve: api/compas_occt.geometry.OCCCurve.md
+          - OCCCurve2d: api/compas_occt.geometry.OCCCurve2d.md
+          - OCCNurbsCurve: api/compas_occt.geometry.OCCNurbsCurve.md
+          - OCCSurface: api/compas_occt.geometry.OCCSurface.md
+          - OCCNurbsSurface: api/compas_occt.geometry.OCCNurbsSurface.md
+      - Brep:
+          - OCCBrepVertex: api/compas_occt.brep.OCCBrepVertex.md
+          - OCCBrepEdge: api/compas_occt.brep.OCCBrepEdge.md
+          - OCCBrepLoop: api/compas_occt.brep.OCCBrepLoop.md
+          - OCCBrepFace: api/compas_occt.brep.OCCBrepFace.md
+          - OCCBrep: api/compas_occt.brep.OCCBrep.md
+      - Conversions: api/compas_occt.conversions.md
+  - Other:
+      - License: license.md
+      - Acknowledgements: acknowledgements.md
+      - changelog.md

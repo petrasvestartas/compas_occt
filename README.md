@@ -1,156 +1,103 @@
 # compas_occt
 
-Cross-platform (Windows, Mac, Linux) Nanobind wrapper for OCCT, focused on single function calls rather than class wrapping.
+Direct, lean [nanobind](https://github.com/wjakob/nanobind) bindings to the
+[OpenCASCADE Technology (OCCT) 8](https://github.com/Open-Cascade-SAS/OCCT) geometry kernel,
+packaged as a drop-in replacement for [`compas_occ`](https://github.com/compas-dev/compas_occ).
 
-![Screenshot 2025-05-23 184722](https://github.com/user-attachments/assets/1cc9662e-5de9-4f58-97f7-13ce489eed1a)
+`compas_occt` exposes the exact same public API as `compas_occ` — NURBS curves and surfaces
+(`OCCNurbsCurve`, `OCCNurbsSurface`), Boundary Representations (`OCCBrep` and its
+vertex/edge/loop/face components), booleans, fillet/offset/slice, STEP/IGES/STL/BREP I/O, and
+the COMPAS plugin factories so `compas.geometry.Brep.from_box(...)` returns an `OCCBrep`. The
+difference is the backend: instead of `pythonocc-core`, it links OCCT directly through a single
+compiled extension module, with no `pythonocc-core` dependency.
 
-## Tests
+## Design
 
-```bash
-pip install --no-build-isolation .
-python -m pytest tests/ -v
-```
+- **One extension module.** All OCCT-backed functions live in a single `compas_occt._occt`
+  module that links OCCT exactly once. This keeps RTTI/memory consistent across the whole API
+  (required for STEP/IGES) and is far leaner than one OCCT copy per submodule.
+- **Functional backend + opaque handles.** Thin C++ free functions operate on four opaque
+  handle wrappers (`Shape`, `GeomCurve`, `Geom2dCurve`, `GeomSurface`); the Python classes hold
+  one of these in `self._native` and delegate.
+- **Zero-copy data transfer.** Bulk coordinate data (mesh tessellation, NURBS control points,
+  curve discretisation) crosses the C++↔Python boundary as `numpy` arrays that view the C++
+  buffer directly (no copy). numpy — not jax — is the right tool here: it is the zero-copy
+  buffer-protocol partner for nanobind's `ndarray`, lightweight, and already a dependency.
 
 ## Installation
-
-Stable releases can be installed from PyPI.
 
 ```bash
 pip install compas_occt
 ```
 
-To install the latest version for development, do:
+Development install (builds OCCT 8 from source on first build; cached afterwards):
 
 ```bash
-git clone https://github.com//compas_occt.git
+git clone https://github.com/petrasvestartas/compas_occt.git
 cd compas_occt
-pip install -e ".[dev]"
+pip install --no-build-isolation -ve ".[dev]"
 ```
 
-If you are a software developer, and this is your own package, then it is usually much more efficient to install the build dependencies in your environment once and use the following command that avoids a costly creation of a new virtual environment at every compilation:
+A C++17 compiler, CMake ≥ 3.15 and Ninja are required for the source build. On Windows, run the
+command from a Visual Studio "x64 Native Tools" prompt (or after calling `vcvars64.bat`).
+
+### Development with [uv](https://github.com/astral-sh/uv)
+
+`uv` gives a fast, reproducible environment. The first build downloads and compiles OCCT 8
+(~30–60 min); it is then cached in `external/occt`, so later builds take a few minutes.
 
 ```bash
-pip install --no-build-isolation -ve .
-cibuildwheel --output-dir wheelhouse .
+# 1. create the environment (Python >= 3.9; 3.14 is used here)
+uv venv --python 3.14
+
+# 2. install the build backend + the runtime and dev/docs dependencies
+uv pip install scikit-build-core nanobind cmake ninja
+uv pip install -e ".[dev,docs]" --no-build-isolation
+
+# 3. (only to run the viewer examples) install compas_viewer and patch it for Python 3.14
+uv pip install compas_viewer
+python tools/patch_compas_viewer.py
+
+# 4. run the tests, examples, or docs
+uv run pytest tests/ -v
+uv run mkdocs serve
+uv run python docs/examples/breps/brep_booleans.py
+```
+
+On Windows, run the commands from a Visual Studio "x64 Native Tools" prompt (or after calling
+`vcvars64.bat`) so the MSVC toolchain and the `.venv` are both on `PATH`.
+
+> **Python 3.14 note.** `compas_viewer` 2.0.2 crashes on Python 3.14 (it reads
+> `self.__annotations__` in a dataclass, which PEP 749 no longer resolves to the class).
+> `tools/patch_compas_viewer.py` applies the one-line upstream fix; it is idempotent and only
+> needed to run the visualisation examples (the core `compas_occt` API does not need it).
+
+## Usage
+
+```python
+from compas.geometry import Box, Point
+from compas.geometry import Brep, NurbsCurve
+
+# COMPAS plugin dispatch -> OCC implementation
+brep = Brep.from_box(Box(1))
+brep.to_step("box.step")
+
+curve = NurbsCurve.from_points([Point(0, 0, 0), Point(3, 6, 0), Point(6, -3, 3), Point(10, 0, 0)])
+print(curve.length())
+```
+
+## Tests
+
+```bash
+pip install --no-build-isolation -ve ".[dev]"
+python -m pytest tests/ -v
 ```
 
 ## Documentation
 
-For further "getting started" instructions, a tutorial, examples, and an API reference,
-please check out the online documentation here: [compas_occt docs](https://.github.io/compas_occt)
+Built with mkdocs (`pip install -e ".[docs]"`, then `mkdocs serve`). Mirrors the `compas_occ`
+tutorial, examples, and API reference.
 
 ## Issue Tracker
 
-If you find a bug or if you have a problem with running the code, please file an issue on the [Issue Tracker](https://github.com//compas_occt/issues).
-
-## Migration Plan: Building Your Own OCC Wrapper
-
-This section outlines a step-by-step plan for creating your own OpenCascade wrapper while maintaining the same API as compas_occt.
-
-### Phase 1: Foundation Setup (Start Here)
-**Recommended Starting Point: `conversions/` module**
-
-1. **Core Infrastructure**
-   - Set up build system (CMakeLists.txt with nanobind)
-   - Create basic C++ wrapper structure
-   - Implement fundamental type conversions (Point, Vector, Frame)
-
-2. **Start with `conversions/geometry.py`**
-   - This is the **BEST STARTING POINT** because:
-     - Contains all fundamental geometry conversions
-     - Small, focused functions that are easy to test
-     - No complex dependencies on other modules
-     - Forms the foundation for everything else
-
-3. **Key conversion functions to implement first:**
-   ```python
-   # From COMPAS to OCC
-   point_to_occ()
-   vector_to_occ() 
-   frame_to_occ_ax3()
-   plane_to_occ()
-   
-   # From OCC to COMPAS
-   point_to_compas()
-   vector_to_compas()
-   ax3_to_compas()
-   plane_to_compas()
-   ```
-
-### Phase 2: Core Utilities
-4. **Implement `occ.py` utilities**
-   - Shape exploration functions (find_vertices, find_edges, etc.)
-   - Basic shape operations (split_shapes, compute_centroid)
-   - These are pure algorithmic functions, easier to port
-
-### Phase 3: Geometry Classes
-5. **Basic Geometry (`geometry/curves/` and `geometry/surfaces/`)**
-   - Start with `OCCCurve` base class
-   - Implement `OCCNurbsCurve` 
-   - Then move to `OCCSurface` and `OCCNurbsSurface`
-   - Focus on core methods: creation, evaluation, conversion
-
-### Phase 4: BRep Implementation
-6. **BRep Foundation (`brep/` module)**
-   - Start with `brepvertex.py`, `brepedge.py` (simplest components)
-   - Then `brepface.py`, `breploop.py`
-   - Finally `brep.py` (most complex, has all boolean operations)
-
-### Phase 5: Advanced Features
-7. **Plugin System Integration**
-   - Implement COMPAS plugin decorators
-   - Register factory methods
-   - Ensure API compatibility
-
-8. **I/O and Advanced Operations**
-   - STEP/IGES import/export
-   - Boolean operations
-   - Meshing and tessellation
-
-### Implementation Strategy
-
-#### Build System Approach
-- Use **nanobind** instead of pybind11 (as shown in memories)
-- Create modular C++ backend with functional approach
-- Each Python module maps to focused C++ functions
-
-#### Key Architectural Decisions
-1. **Functional vs Object-Oriented**: Use functional approach in C++ backend
-2. **Memory Management**: Let nanobind handle Python-C++ object lifecycle
-3. **Type System**: Use explicit Eigen types for matrices/arrays
-4. **Error Handling**: Implement proper exception handling between C++ and Python
-
-#### Testing Strategy
-- Start each module with simple unit tests
-- Use existing compas_occt tests as reference
-- Validate API compatibility at each step
-
-### Module Dependency Order
-```
-conversions/geometry.py  (START HERE - no dependencies)
-    ↓
-occ.py  (depends on conversions)
-    ↓  
-geometry/curves/  (depends on conversions + occ)
-    ↓
-geometry/surfaces/  (depends on curves)
-    ↓
-brep/  (depends on all above)
-```
-
-### Why Start with `conversions/geometry.py`?
-1. **Minimal Dependencies**: Only depends on OCC.Core and compas.geometry
-2. **Pure Functions**: Easy to test and validate
-3. **Foundation Layer**: Everything else builds on these conversions  
-4. **Incremental Progress**: You can test each conversion function independently
-5. **Clear Success Criteria**: Easy to verify correctness
-
-### Development Workflow
-1. Pick one conversion function (e.g., `point_to_occ`)
-2. Implement C++ version using nanobind
-3. Create Python wrapper
-4. Write unit test comparing with original
-5. Repeat for next function
-6. Move to next module when current is complete
-
-This approach ensures you maintain API compatibility while building your own optimized implementation step by step.
+Please report bugs on the [issue tracker](https://github.com/petrasvestartas/compas_occt/issues).

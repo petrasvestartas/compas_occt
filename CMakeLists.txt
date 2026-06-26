@@ -34,9 +34,10 @@ endif()
 # ------------------------------------------------------------------------------
 # OCCT (static libraries)
 # ------------------------------------------------------------------------------
-set(CMAKE_DEPS_DIR ${CMAKE_BINARY_DIR}/deps)
-set(OCCT_PREFIX ${CMAKE_DEPS_DIR}/occt) # Create needed directories
-file(MAKE_DIRECTORY ${CMAKE_DEPS_DIR})
+# OCCT is cached under external/ (like Eigen) so it survives `build/` cleans and is not
+# re-downloaded / rebuilt every time (the OCCT build is the 30-60 min long pole).
+set(OCCT_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/external/occt)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/external)
 set(OCCT_SRC_DIR ${OCCT_PREFIX}/src/occt)
 set(OCCT_BUILD_DIR ${OCCT_PREFIX}/src/occt-build)
 set(OCCT_INSTALL_DIR ${OCCT_PREFIX}/install) # Use the same custom install path as specified in ExternalProject_Add
@@ -56,7 +57,22 @@ endif()
 
 # OCCT has many static libraries. Generate the library targets list using OCCT_LIB_DIR.
 set(OCCT_LIB_TARGETS "")
-set(OCCT_MODULES TKBool TKFillet TKOffset TKFeat TKPrim TKBO TKMesh TKHLR TKShHealing TKTopAlgo TKGeomAlgo TKBRep TKGeomBase TKG3d TKG2d TKMath TKernel)
+# High-level -> low-level ordering for single-pass linkers. DataExchange toolkits
+# (STEP/IGES/STL + Interface_Static/APIHeaderSection) -> TKDE*/TKXSBase. Bounding-box classes
+# need NO separate toolkit in OCCT 8.0: Bnd -> TKMath, BndLib -> TKGeomBase, BRepBndLib -> TKTopAlgo
+# (there is no TKBnd toolkit).
+set(OCCT_MODULES
+    TKDESTEP TKDEIGES TKDESTL TKDE TKXSBase
+    # CAF / XDE toolkits: OCCT 8.0 bundles XDE-based STEPCAFControl_* + DESTEP_Provider into
+    # TKDESTEP, so these are referenced transitively by the STEP read/write path. They are
+    # auto-built as DataExchange dependencies even with ApplicationFramework OFF.
+    TKBinXCAF TKXmlXCAF TKXCAF TKVCAF TKCAF TKLCAF
+    TKBin TKBinL TKBinTObj TKXml TKXmlL TKXmlTObj TKStd TKStdL TKTObj TKCDF
+    # TKXCAF (XCAFDoc_VisMaterial) pulls Graphic3d_* material symbols from the
+    # Visualization layer; TKV3d + TKService satisfy them (no OpenGL/driver needed).
+    TKV3d TKService
+    TKBool TKFillet TKOffset TKFeat TKPrim TKBO TKMesh TKHLR
+    TKShHealing TKTopAlgo TKGeomAlgo TKBRep TKGeomBase TKG3d TKG2d TKMath TKernel)
 foreach(MODULE ${OCCT_MODULES})
     list(APPEND OCCT_LIB_TARGETS "${OCCT_LIB_DIR}/${LIB_PREFIX}${MODULE}${LIB_EXT}")
 endforeach()
@@ -67,7 +83,9 @@ if(NOT EXISTS "${OCCT_INSTALL_DIR}/my_include" OR NOT EXISTS "${OCCT_INSTALL_DIR
     ExternalProject_Add(
         occt_download
         # URL https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V7_9_1.zip
-        URL https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V8_0_0_rc2.zip
+        # Latest OCCT 8: V8_0_0_p1 (8.0.0 patch 1) - newer than the V8_0_0 release and the
+        # rc1..rc5 candidates; matches the local clone at C:/brg/OCCT (git describe = V8_0_0_p1).
+        URL https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V8_0_0_p1.zip
         PREFIX ${OCCT_PREFIX}
         SOURCE_DIR ${OCCT_SRC_DIR}
         BINARY_DIR ${OCCT_BUILD_DIR}
@@ -80,9 +98,14 @@ if(NOT EXISTS "${OCCT_INSTALL_DIR}/my_include" OR NOT EXISTS "${OCCT_INSTALL_DIR
             # Other build options
             -DCMAKE_BUILD_TYPE=Release
             -DBUILD_LIBRARY_TYPE=Static
+            # OCCT requires FreeType by default (font/text rendering); we don't ship it and
+            # Visualization is OFF, so disable the dependency to avoid a hard configure error.
+            -DUSE_FREETYPE=OFF
             -DBUILD_MODULE_Draw=OFF
             -DBUILD_MODULE_ApplicationFramework=OFF
-            -DBUILD_MODULE_DataExchange=OFF
+            # DataExchange ON: STEP/IGES/STL import+export (OCCBrep.to_step/from_step/...).
+            -DBUILD_MODULE_DataExchange=ON
+            # Visualization stays OFF: tessellation is reimplemented on BRepMesh (no ShapeTesselator).
             -DBUILD_MODULE_Visualization=OFF
             -DBUILD_SAMPLES_QT=OFF
             -DBUILD_USE_PCH=ON
@@ -99,15 +122,37 @@ endif()
 # Build nanobind Python modules
 # ------------------------------------------------------------------------------
 
-function(add_nanobind_module module_name source_file)
-    nanobind_add_module(${module_name} ${source_file})                                          # Creates the Python extension module with nanobind
-    target_include_directories(${module_name} SYSTEM PRIVATE ${EIGEN_DIR} ${OCCT_INCLUDE_DIR})  # Add include paths for headers (SYSTEM suppresses warnings)
-    add_dependencies(${module_name} eigen_ext occt_ext)                                         # Ensures Eigen and OCCT are built before this module
-    target_link_libraries(${module_name} PRIVATE ${OCCT_LIB_TARGETS})                           # Links against all the OCCT static libraries
-    install(TARGETS ${module_name} LIBRARY DESTINATION compas_occt)                             # Installs the compiled module to the compas_occt package
+# Variadic: a module may be built from several .cpp files (e.g. _brep, _curves).
+function(add_nanobind_module module_name)
+    nanobind_add_module(${module_name} ${ARGN})                                                              # Creates the Python extension module with nanobind
+    target_include_directories(${module_name} SYSTEM PRIVATE ${EIGEN_DIR} ${OCCT_INCLUDE_DIR})              # External headers (SYSTEM suppresses warnings)
+    target_include_directories(${module_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)                       # Our own headers (compas.h, handles.h, occt.h)
+    add_dependencies(${module_name} eigen_ext occt_ext)                                                      # Ensures Eigen and OCCT are built first
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang" AND NOT APPLE AND NOT MSVC)
+        # GNU ld is order-sensitive and OCCT static libs have cyclic deps -> wrap in a group.
+        target_link_libraries(${module_name} PRIVATE -Wl,--start-group ${OCCT_LIB_TARGETS} -Wl,--end-group)
+    else()
+        # MSVC link is multi-pass and Apple ld64 is order-insensitive: a flat list is fine
+        # (and ld64 does not understand --start-group/--end-group).
+        target_link_libraries(${module_name} PRIVATE ${OCCT_LIB_TARGETS})
+    endif()
+    if(WIN32)
+        # OCCT TKernel (OSD_Host/OSD_File) uses Winsock + Win32 system APIs; static OCCT does
+        # not carry these, so link the system import libraries ourselves.
+        target_link_libraries(${module_name} PRIVATE ws2_32 advapi32 user32 gdi32 shell32 ole32)
+    endif()
+    install(TARGETS ${module_name} LIBRARY DESTINATION compas_occt)                                          # Installs into the compas_occt package
 endfunction()
 
-add_nanobind_module(_primitives src/primitives.cpp)
-add_nanobind_module(_curves src/curves.cpp)
-add_nanobind_module(_nurbssurface src/nurbssurface.cpp)
-add_nanobind_module(_geometry src/geometry.cpp)
+# A SINGLE extension module: links OCCT exactly once (correctness - shared RTTI/memory across
+# the whole API - and far leaner than one OCCT copy per submodule).
+add_nanobind_module(_occt
+    src/module.cpp
+    src/types.cpp
+    src/geometry.cpp
+    src/curves.cpp src/nurbscurve.cpp src/curve2d.cpp
+    src/surfaces.cpp src/nurbssurface.cpp
+    src/brep_explore.cpp src/brep_props.cpp src/brep_make.cpp src/brep_adaptor.cpp src/brep_relations.cpp src/brep_boolean.cpp src/brep_fix.cpp
+    src/meshing.cpp
+    src/io.cpp)
+
