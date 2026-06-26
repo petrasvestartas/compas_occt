@@ -138,6 +138,11 @@ environment.CMAKE_BUILD_PARALLEL_LEVEL = "2"
 # Basic CMake settings (the rest is handled in CMakeLists.txt)
 environment.CMAKE_ARGS = "-DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=OFF"
 
+# OCCT's Visualization toolkits (TKService/TKV3d, linked for the XDE STEP-attributes path)
+# need the X11 development headers when OCCT is compiled on Linux. manylinux2014 is CentOS 7 -> yum.
+[tool.cibuildwheel.linux]
+before-all = "yum install -y libX11-devel libXext-devel libXmu-devel libXi-devel mesa-libGL-devel"
+
 # ============================================================================
 # code style configuration
 # ============================================================================

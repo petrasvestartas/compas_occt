@@ -89,7 +89,7 @@ plugins:
             - https://docs.python.org/3/objects.inv
             - https://compas.dev/compas/latest/objects.inv
           options:
-            allow_inspection: true
+            allow_inspection: false
             backlinks: tree
             docstring_options:
               ignore_init_summary: true

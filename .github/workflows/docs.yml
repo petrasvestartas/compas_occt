@@ -24,8 +24,7 @@ jobs:
           path: ~/.cache
           restore-keys: |
             mkdocs-material-
-      # Builds the OCCT-backed C++ extension (needed so mkdocstrings can import compas_occt),
-      # then the mkdocs site.
-      - run: pip install .[dev,docs]
-      - run: pip install mkdocs-material
+      # mkdocstrings reads the API from the source in src/ (allow_inspection: false), so the
+      # docs do NOT need the compiled OCCT extension built -- just the mkdocs tooling.
+      - run: pip install compas mkdocs-material "mkdocstrings[python]" markdown-callouts
       - run: mkdocs gh-deploy --force

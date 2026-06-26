@@ -140,6 +140,14 @@ function(add_nanobind_module module_name)
         # OCCT TKernel (OSD_Host/OSD_File) uses Winsock + Win32 system APIs; static OCCT does
         # not carry these, so link the system import libraries ourselves.
         target_link_libraries(${module_name} PRIVATE ws2_32 advapi32 user32 gdi32 shell32 ole32)
+    elseif(APPLE)
+        # TKService/TKV3d (Visualization, linked for the XDE STEP-attributes path) reference the
+        # Cocoa/OpenGL/IOKit frameworks on macOS, even though we never open a display.
+        target_link_libraries(${module_name} PRIVATE "-framework Cocoa" "-framework OpenGL" "-framework IOKit")
+    elseif(UNIX)
+        # ... and the X11 + GL shared libraries on Linux.
+        find_package(X11)
+        target_link_libraries(${module_name} PRIVATE ${X11_LIBRARIES} GL)
     endif()
     install(TARGETS ${module_name} LIBRARY DESTINATION compas_occt)                                          # Installs into the compas_occt package
 endfunction()
