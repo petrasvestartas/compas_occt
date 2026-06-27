@@ -120,9 +120,13 @@ build-verbosity = 3
 # typing-extensions is pinned >=4.14.1 to satisfy pydantic (pulled in transitively); without it
 # the test env resolves an older 4.12.x and pip emits a dependency-conflict warning.
 test-requires = ["numpy", "compas", "pytest", "build", "typing-extensions>=4.14.1"]
-test-command = "pip install numpy compas && pip list && pytest {project}/tests"
+test-command = "pip list && pytest {project}/tests"
 build-frontend = "pip"
-manylinux-x86_64-image = "manylinux2014"
+# manylinux_2_28 (AlmaLinux 8), matching compas_cgal. The test step installs `compas`, which
+# pulls scipy; modern scipy (>=1.16) ships ONLY manylinux_2_28 wheels (it dropped the older
+# manylinux2014/manylinux_2_17 ones), so on a manylinux2014 image pip falls back to building
+# scipy from source and fails with "Dependency 'OpenBLAS' not found". OCCT itself needs no BLAS.
+manylinux-x86_64-image = "manylinux_2_28"
 # We build a single stable-ABI (abi3) wheel via wheel.py-api = "cp312"; do NOT skip cp312.
 skip = ["*_i686", "*-musllinux_*", "*-win32", "pp*"]
 macos.environment.MACOSX_DEPLOYMENT_TARGET = "11.00"
