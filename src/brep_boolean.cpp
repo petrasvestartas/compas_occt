@@ -124,10 +124,11 @@ static std::pair<std::vector<Shape>, std::vector<Shape>> overlap(
     const Shape& a, const Shape& b, double linear, double angular, bool relative, double tolerance) {
     using ProxMap = NCollection_DataMap<int, TColStd_PackedMapOfInteger>;
 
+    // The 5-arg constructor already meshes the shape (it auto-calls Perform), so an explicit
+    // Perform() here would triangulate each shape a second time. Constructing the meshers is
+    // enough; the triangulation is stored on the shape for BRepExtrema_ShapeProximity to use.
     BRepMesh_IncrementalMesh mesher1(a.shape, linear, relative, angular, Standard_False);
     BRepMesh_IncrementalMesh mesher2(b.shape, linear, relative, angular, Standard_False);
-    mesher1.Perform();
-    mesher2.Perform();
 
     BRepExtrema_ShapeProximity proximity(a.shape, b.shape, tolerance);
     proximity.Perform();

@@ -11,7 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Performance: `OCCBrep.overlap` (and therefore `overlap_intersection`) no longer meshes each
+  shape twice. The `BRepMesh_IncrementalMesh` constructor already triangulates (it auto-calls
+  `Perform`), so the extra explicit `Perform()` calls were redundant -- removing them makes
+  `overlap` ~1.7x faster end-to-end (the `brep_overlap` example: 8.5 ms -> 4.9 ms here).
+- Examples: `brep_from_extrusion2` no longer uses `pythonocc` (`OCC.Core.ShapeAnalysis`); the
+  free-boundary check is now a native `edge_faces` naked-edge count. There is no `pythonocc`
+  usage anywhere in the project.
+
 ### Removed
+
+- Duplicate example `brep_from_extrusion3.py` (byte-identical to `brep_from_extrusion2.py`).
 
 ## [0.1.16] 2026-06-27
 
