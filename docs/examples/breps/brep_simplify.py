@@ -11,69 +11,50 @@ from compas_occt.brep import OCCBrep
 
 TOL.lineardeflection = 0.1
 
+# ==============================================================================
+# Read the OBJ as separate (un-welded) solids
+#
+# The file is an assembly of 9 triangulated solids that touch each other, but it
+# carries no ``o``/``g`` object tags. The convenient ``Mesh.from_obj`` welds
+# coincident vertices (288 -> 264 here), which fuses the touching solids into a
+# single connected mesh. That fusion is irreversible: OpenCASCADE then sees one
+# solid, and no amount of ``sew`` / ``shells`` / ``solids`` splitting can pull the
+# parts back out, so ``simplify`` can only reach 344 faces.
+#
+# The solids are distinguished *only* by their disjoint vertex indices in the OBJ.
+# Building the mesh from the raw (un-welded) reader vertices/faces keeps that
+# index separation, so the standard ``Mesh.exploded`` recovers the 9 solids and
+# each one's coplanar triangles merge cleanly -> 162 faces.
+# ==============================================================================
 
-def solids_from_obj(path):
-    """Read an OBJ as a list of separate (un-welded) solids.
+obj = OBJ(pathlib.Path(__file__).parent / "merge_test.obj")
+obj.read()
+mesh = Mesh.from_vertices_and_faces(obj.reader.vertices, obj.reader.faces)
+solids = mesh.exploded()
+print("separate solids:", len(solids))
 
-    The file is an assembly of several solids but has no ``o``/``g`` object tags,
-    so ``Mesh.from_obj`` would weld it into a single, partly non-manifold mesh:
-    the solids get fused where they touch, which stops OpenCASCADE from merging
-    their coplanar faces cleanly. Reading the *raw* vertices and faces with the
-    native COMPAS OBJ reader and splitting them into connected components by
-    shared vertices keeps every solid intact.
-    """
-    obj = OBJ(path)
-    obj.read()
-    vertices = obj.reader.vertices  # raw, un-welded vertex coordinates
-    faces = obj.reader.faces  # raw face indices
+# ==============================================================================
+# Recenter all solids on their shared centre
+# ==============================================================================
 
-    # union-find: group faces that share vertices into separate solids
-    parent = {}
-
-    def root(x):
-        parent.setdefault(x, x)
-        while parent[x] != x:
-            parent[x] = parent[parent[x]]
-            x = parent[x]
-        return x
-
-    for face in faces:
-        for a, b in zip(face, face[1:] + face[:1]):
-            parent.setdefault(a, a)
-            parent[root(a)] = root(b)
-
-    groups = {}
-    for face in faces:
-        groups.setdefault(root(face[0]), []).append(face)
-
-    meshes = []
-    for group in groups.values():
-        used = sorted({v for face in group for v in face})
-        index = {v: i for i, v in enumerate(used)}
-        meshes.append(Mesh.from_vertices_and_faces([vertices[v] for v in used], [[index[v] for v in face] for face in group]))
-    return meshes
-
-
-# the OBJ is an assembly of separate triangulated solids
-meshes = solids_from_obj(pathlib.Path(__file__).parent / "merge_test.obj")
-print("separate solids:", len(meshes))
-
-# recenter all solids on their shared centre
-points = [mesh.vertex_coordinates(v) for mesh in meshes for v in mesh.vertices()]
+points = [solid.vertex_coordinates(v) for solid in solids for v in solid.vertices()]
 center = [(min(p[i] for p in points) + max(p[i] for p in points)) / 2 for i in range(3)]
-for mesh in meshes:
-    mesh.transform(Translation.from_vector([-c for c in center]))
+for solid in solids:
+    solid.transform(Translation.from_vector([-c for c in center]))
 
-# merge the coplanar triangles of each solid into flat faces with OpenCASCADE's
+# ==============================================================================
+# Merge the coplanar triangles of each solid into flat faces with OpenCASCADE's
 # ShapeUpgrade_UnifySameDomain (exposed as OCCBrep.simplify)
+# ==============================================================================
+
 breps = []
-for mesh in meshes:
-    brep = OCCBrep.from_mesh(mesh, solid=False)
+for solid in solids:
+    brep = OCCBrep.from_mesh(solid, solid=False)
     brep.simplify(merge_edges=True, merge_faces=True)
     breps.append(brep)
 brep = OCCBrep.from_breps(breps)
 
-print("triangles:", sum(m.number_of_faces() for m in meshes), "-> flat brep faces:", len(brep.faces))
+print("triangles:", sum(s.number_of_faces() for s in solids), "-> flat brep faces:", len(brep.faces))
 
 # ==============================================================================
 # Visualisation: triangulated input (left) vs merged flat Brep (right)
@@ -82,8 +63,8 @@ print("triangles:", sum(m.number_of_faces() for m in meshes), "-> flat brep face
 viewer = Viewer()
 
 scale = Scale.from_factors([0.001, 0.001, 0.001])
-for mesh in meshes:
-    viewer.scene.add(mesh.transformed(Translation.from_vector([-1.2, 0, 0]) * scale), show_points=False)
+for solid in solids:
+    viewer.scene.add(solid.transformed(Translation.from_vector([-1.2, 0, 0]) * scale), show_points=False)
 viewer.scene.add(brep.transformed(Translation.from_vector([1.2, 0, 0]) * scale), show_points=False)
 
 viewer.show()
