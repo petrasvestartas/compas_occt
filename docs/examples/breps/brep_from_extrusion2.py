@@ -1,5 +1,4 @@
 from compas_viewer.viewer import Viewer
-from OCC.Core import ShapeAnalysis
 
 from compas.colors import Color
 from compas.geometry import Box
@@ -36,11 +35,10 @@ print(extrusion.is_compound)
 print(extrusion.is_solid)
 print(extrusion.is_infinite)
 
-closedwires = ShapeAnalysis.ShapeAnalysis_FreeBounds(extrusion.occ_shape).GetClosedWires()
-openwires = ShapeAnalysis.ShapeAnalysis_FreeBounds(extrusion.occ_shape).GetOpenWires()
-
-print("Number of closed wires:", closedwires)
-print("Number of open wires:", openwires)
+# Free (naked) boundary edges -- edges used by only one face. A watertight solid has none;
+# the split piece keeps naked edges along the open cut. Pure compas_occt API, no pythonocc.
+naked_edges = [edge for edge in extrusion.edges if len(extrusion.edge_faces(edge)) == 1]
+print("Number of naked boundary edges:", len(naked_edges))
 
 viewer = Viewer()
 viewer.scene.add(polyline)
