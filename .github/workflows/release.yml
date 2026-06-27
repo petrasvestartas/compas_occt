@@ -34,12 +34,11 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: manylinux
-          # - os: macos-latest
-          #   platform: mac
-          - os: macos-13
-            platform: mac-intel
-          - os: macos-14
-            platform: mac-arm
+          # Single Apple-Silicon runner cross-compiles BOTH x86_64 + arm64 wheels
+          # (macos.archs in pyproject.toml), like compas_cgal. macos-13 (Intel) was
+          # retired by GitHub in Dec 2025.
+          - os: macos-latest
+            platform: mac
           - os: windows-latest
             platform: windows
 
