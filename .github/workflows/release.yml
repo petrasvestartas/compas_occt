@@ -34,11 +34,12 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: manylinux
-          # Single Apple-Silicon runner cross-compiles BOTH x86_64 + arm64 wheels
-          # (macos.archs in pyproject.toml), like compas_cgal. macos-13 (Intel) was
-          # retired by GitHub in Dec 2025.
-          - os: macos-latest
-            platform: mac
+          # Native runner per arch (OCCT has arch-specific static libs -> no cross-compile).
+          # macos-13 (Intel) was retired Dec 2025; macos-15-intel is the current Intel runner.
+          - os: macos-15-intel
+            platform: mac-intel
+          - os: macos-14
+            platform: mac-arm
           - os: windows-latest
             platform: windows
 

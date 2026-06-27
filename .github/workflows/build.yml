@@ -30,11 +30,14 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: manylinux
-          # Single Apple-Silicon runner cross-compiles BOTH x86_64 + arm64 wheels
-          # (macos.archs in pyproject.toml), like compas_cgal. macos-13 (Intel) was
-          # retired by GitHub in Dec 2025, so a dedicated Intel runner just queues forever.
-          - os: macos-latest
-            platform: mac
+          # Native runner per arch. OCCT compiles to architecture-specific static libs, so
+          # (unlike header-only CGAL / compas_cgal) it can't be cross-compiled on one runner --
+          # the x86_64 link fails against arm64 OCCT objects. macos-13 (Intel) was retired by
+          # GitHub in Dec 2025; macos-15-intel is the current Intel runner (until ~Aug 2027).
+          - os: macos-15-intel
+            platform: mac-intel
+          - os: macos-14
+            platform: mac-arm
           - os: windows-latest
             platform: windows
     steps:

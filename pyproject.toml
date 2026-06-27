@@ -130,10 +130,9 @@ manylinux-x86_64-image = "manylinux_2_28"
 # We build a single stable-ABI (abi3) wheel via wheel.py-api = "cp312"; do NOT skip cp312.
 skip = ["*_i686", "*-musllinux_*", "*-win32", "pp*"]
 macos.environment.MACOSX_DEPLOYMENT_TARGET = "11.00"
-# Build both Intel and Apple-Silicon wheels on one (arm64) runner via cross-compilation,
-# like compas_cgal. The x86_64 wheel is built but not test-run (cibuildwheel can't execute
-# Intel binaries on the arm64 runner), so its tests are skipped automatically.
-macos.archs = ["x86_64", "arm64"]
+# Each macOS wheel is built natively on its own runner (mac-intel -> x86_64, mac-arm -> arm64);
+# cibuildwheel defaults to the runner's native arch. We do NOT cross-compile because OCCT emits
+# architecture-specific static libraries (a fat/universal2 OCCT build conflicts with its PCH).
 
 # Pre-installation dependencies for wheel building. Only the build toolchain is needed here:
 # scikit-build-core + nanobind already come from [build-system].requires (installed into the
