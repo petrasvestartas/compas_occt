@@ -380,6 +380,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Development">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#build-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build requirements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-uv" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        With uv
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -2737,6 +2765,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Development">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#build-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build requirements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-uv" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        With uv
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -2768,12 +2824,28 @@ To install <code>compas_viewer</code> in the same environment</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span>compas_viewer
 </span></code></pre></div>
 <h2 id="development">Development<a class="headerlink" href="#development" title="Permanent link">¤</a></h2>
-<p>To get the latest version, and install developer tools,
-use a local clone of the repo.</p>
+<p>Build from a local clone of the repo.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/petrasvestartas/compas_occt.git
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">cd</span><span class="w"> </span>compas_occt
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>pip<span class="w"> </span>install<span class="w"> </span>--no-build-isolation<span class="w"> </span>-ve<span class="w"> </span>.
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>pip<span class="w"> </span>install<span class="w"> </span>--no-build-isolation<span class="w"> </span>-ve<span class="w"> </span><span class="s2">&quot;.[dev]&quot;</span>
 </span></code></pre></div>
+<h3 id="build-requirements">Build requirements<a class="headerlink" href="#build-requirements" title="Permanent link">¤</a></h3>
+<p>A C++17 compiler, CMake ≥ 3.15, and Ninja. On Windows, run the command from a Visual Studio
+"x64 Native Tools" prompt (or after calling <code>vcvars64.bat</code>).</p>
+<p>The first build downloads and compiles OCCT 8 from source (~30–60 min). It is then cached in
+<code>external/occt</code>, so later builds take only a few minutes.</p>
+<h3 id="with-uv">With <a href="https://github.com/astral-sh/uv">uv</a><a class="headerlink" href="#with-uv" title="Permanent link">¤</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>venv<span class="w"> </span>--python<span class="w"> </span><span class="m">3</span>.14
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>scikit-build-core<span class="w"> </span>nanobind<span class="w"> </span>cmake<span class="w"> </span>ninja
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[dev,docs]&quot;</span><span class="w"> </span>--no-build-isolation
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1"># tests / docs / examples</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/<span class="w"> </span>-v
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>uv<span class="w"> </span>run<span class="w"> </span>mkdocs<span class="w"> </span>serve
+</span></code></pre></div>
+<p>To run the viewer examples on Python 3.14, also <code>uv pip install compas_viewer</code> and apply the
+one-line upstream fix with <code>python tools/patch_compas_viewer.py</code> (idempotent; only needed for the
+visualisation examples, not the core API).</p>
 
 
 
