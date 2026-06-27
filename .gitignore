@@ -68,8 +68,8 @@ instance/
 # Scrapy stuff:
 .scrapy
 
-# Sphinx documentation
-docs/_build/
+# mkdocs documentation
+site/
 
 # local dev build helpers (machine-specific vcvars/python paths) + root scratch
 /build_stage6.bat

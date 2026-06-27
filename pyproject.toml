@@ -135,10 +135,8 @@ macos.environment.MACOSX_DEPLOYMENT_TARGET = "11.00"
 # Pre-installation dependencies for wheel building. Only the build toolchain is needed here:
 # scikit-build-core + nanobind already come from [build-system].requires (installed into the
 # isolated build env), so we add just cmake/ninja. We deliberately do NOT install
-# requirements-dev.txt -- it pulls docs/lint tooling (sphinx_compas2_theme, compas_invocations2)
-# whose transitive scipy has no manylinux2014 wheel for newer Pythons, so pip falls back to a
-# source build that fails with "Dependency 'OpenBLAS' not found". None of it is needed to build
-# or test the wheel (test deps are declared separately in test-requires).
+# requirements-dev.txt here -- it is dev-only tooling (lint/release/test helpers), none of which
+# is needed to build the wheel (test deps are declared separately in test-requires).
 before-build = [
     "pip install cmake ninja",
 ]
