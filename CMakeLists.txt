@@ -124,7 +124,14 @@ endif()
 
 # Variadic: a module may be built from several .cpp files (e.g. _brep, _curves).
 function(add_nanobind_module module_name)
-    nanobind_add_module(${module_name} ${ARGN})                                                              # Creates the Python extension module with nanobind
+    # STABLE_ABI is REQUIRED to match `wheel.py-api = "cp312"` in pyproject.toml. Without it,
+    # nanobind builds a version-specific extension (e.g. _occt.cp312-win_amd64.pyd) while
+    # scikit-build-core still tags the wheel `cp312-abi3`. cibuildwheel then tests that single
+    # wheel on cp313/cp314, where Python refuses to load a cp312-tagged .pyd -> the
+    # "cannot import name '_occt'" failure. With STABLE_ABI, nanobind emits a true abi3 module
+    # (_occt.abi3.so / _occt.pyd) on Python >=3.12 and silently falls back to a version-specific
+    # build on older Pythons (which scikit-build-core then tags correctly per version).
+    nanobind_add_module(${module_name} STABLE_ABI ${ARGN})                                                   # Creates the Python extension module with nanobind
     target_include_directories(${module_name} SYSTEM PRIVATE ${EIGEN_DIR} ${OCCT_INCLUDE_DIR})              # External headers (SYSTEM suppresses warnings)
     target_include_directories(${module_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)                       # Our own headers (compas.h, handles.h, occt.h)
     add_dependencies(${module_name} eigen_ext occt_ext)                                                      # Ensures Eigen and OCCT are built first

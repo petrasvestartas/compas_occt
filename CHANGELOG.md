@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Example pages: Brep Booleans (union/difference/intersection), Merge Coplanar Faces, and STEP File With Attributes, each with a generated screenshot.
 - Tutorial sections for curves, surfaces, breps, and visualisation.
 
+### Fixed
+
+- Pass `STABLE_ABI` to `nanobind_add_module` so the compiled `_occt` extension actually targets Python's stable ABI, matching `wheel.py-api = "cp312"`. Previously the wheel was tagged `cp312-abi3` but contained a version-specific module, so cibuildwheel's cp313/cp314 test stage failed with `ImportError: cannot import name '_occt' from 'compas_occt'`.
+- Pin `typing-extensions>=4.14.1` in the cibuildwheel test environment to silence the `pydantic` dependency-conflict warning.
+
 ### Changed
 
 - Consolidated the per-domain extension modules into a single `_occt` module so OCCT RTTI/memory is shared across the whole API (this is what makes STEP/IGES round-trip geometry).

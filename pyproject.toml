@@ -117,7 +117,9 @@ CMAKE_POLICY_DEFAULT_CMP0135 = "NEW"
 
 [tool.cibuildwheel]
 build-verbosity = 3
-test-requires = ["numpy", "compas", "pytest", "build"]
+# typing-extensions is pinned >=4.14.1 to satisfy pydantic (pulled in transitively); without it
+# the test env resolves an older 4.12.x and pip emits a dependency-conflict warning.
+test-requires = ["numpy", "compas", "pytest", "build", "typing-extensions>=4.14.1"]
 test-command = "pip install numpy compas && pip list && pytest {project}/tests"
 build-frontend = "pip"
 manylinux-x86_64-image = "manylinux2014"
