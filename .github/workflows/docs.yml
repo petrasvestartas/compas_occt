@@ -26,5 +26,11 @@ jobs:
             mkdocs-material-
       # mkdocstrings reads the API from the source in src/ (allow_inspection: false), so the
       # docs do NOT need the compiled OCCT extension built -- just the mkdocs tooling.
-      - run: pip install compas mkdocs-material "mkdocstrings[python]" markdown-callouts
-      - run: mkdocs gh-deploy --force
+      - run: pip install compas mkdocs-material "mkdocstrings[python]" markdown-callouts mike
+      # Deploy versioned docs with mike so the site is served under /latest/ (matching the
+      # `extra.version.provider: mike` config in mkdocs.yml and the compas.dev convention),
+      # with the root redirecting there. Plain `mkdocs gh-deploy` published a FLAT site at the
+      # root with no /latest/ path -- which is why /latest/ returned 404.
+      - run: git fetch origin gh-pages --depth=1 || true
+      - run: mike deploy --push --update-aliases latest
+      - run: mike set-default --push latest
