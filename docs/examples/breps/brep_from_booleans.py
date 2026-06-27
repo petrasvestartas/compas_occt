@@ -1,3 +1,5 @@
+import pathlib
+
 from compas_viewer import Viewer
 
 from compas.geometry import Box
@@ -22,7 +24,7 @@ cz = Cylinder(0.7 * R, 4 * R, frame=XY).to_brep()
 # result = OCCBrep.from_boolean_difference(box, [cx, cy, cz])
 result = box - (cx + cy + cz)
 
-result.to_step("/Users/vanmelet/Desktop/booleans.step")
+result.to_step(pathlib.Path(__file__).parent / "booleans.step")
 
 # ==============================================================================
 # Visualisation

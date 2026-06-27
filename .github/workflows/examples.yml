@@ -1,0 +1,29 @@
+name: examples
+
+# Manually run the docs examples headless (GUI stripped) against the PUBLISHED
+# compas_occt wheel, on every OS -- coverage the unit tests don't provide. Trigger
+# from the Actions tab ("Run workflow") or: gh workflow run examples.yml
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "compas_occt version to install from PyPI"
+        default: "0.1.16"
+
+jobs:
+  examples:
+    name: examples on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15-intel, ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install published compas_occt + deps
+        run: pip install "compas_occt==${{ inputs.version }}" compas numpy
+      - name: Run examples headless
+        run: python tests/run_examples_headless.py
