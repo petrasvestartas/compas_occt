@@ -4,7 +4,7 @@ __author__ = ["Petras Vestartas"]
 __copyright__ = "Petras Vestartas"
 __license__ = "MIT License"
 __email__ = "petrasvestartas@gmail.com"
-__version__ = "0.1.16"
+__version__ = "0.1.17"
 
 
 HERE = os.path.dirname(__file__)

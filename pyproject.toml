@@ -29,7 +29,7 @@ classifiers = [
     "Programming Language :: C++",
     "License :: OSI Approved :: MIT License"
 ]
-version = "0.1.16"
+version = "0.1.17"
 
 [project.optional-dependencies]
 dev = [
@@ -195,7 +195,7 @@ docstring-code-line-length = "dynamic"
 # ============================================================================
 
 [tool.bumpversion]
-current_version = "0.1.16"
+current_version = "0.1.17"
 message = "Bump version to {new_version}"
 commit = true
 tag = true
