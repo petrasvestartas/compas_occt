@@ -147,6 +147,9 @@ static Shape ngon_to_face(const std::vector<Triple>& points) {
 }
 
 void register_meshing(nb::module_& m) {
+    // NOTE: do NOT add a blanket nb::gil_scoped_release here -- tesselate builds the nb::ndarray
+    // / nb::tuple return value inside its body, which requires the GIL. (Releasing it only around
+    // the internal BRepMesh call would need manual scoping inside tesselate.)
     m.def("tesselate", &tesselate);
     m.def("triangle_to_face", &triangle_to_face);
     m.def("quad_to_face", &quad_to_face);

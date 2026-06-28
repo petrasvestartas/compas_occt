@@ -149,12 +149,16 @@ static std::pair<std::vector<Shape>, std::vector<Shape>> overlap(
 }
 
 void register_boolean(nb::module_& m) {
-    m.def("boolean_union", &boolean_union);
-    m.def("boolean_difference", &boolean_difference);
-    m.def("boolean_intersection", &boolean_intersection);
-    m.def("section", &section);
-    m.def("split", &split);
-    m.def("fillet", &fillet);
-    m.def("offset", &offset);
-    m.def("overlap", &overlap);
+    // These OCCT operations are long-running and operate purely on C++ data (no Python
+    // callbacks), so release the GIL for the duration -> callers can run many of them in
+    // parallel threads. No effect on single-threaded use.
+    using gil = nb::call_guard<nb::gil_scoped_release>;
+    m.def("boolean_union", &boolean_union, gil());
+    m.def("boolean_difference", &boolean_difference, gil());
+    m.def("boolean_intersection", &boolean_intersection, gil());
+    m.def("section", &section, gil());
+    m.def("split", &split, gil());
+    m.def("fillet", &fillet, gil());
+    m.def("offset", &offset, gil());
+    m.def("overlap", &overlap, gil());
 }

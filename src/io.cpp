@@ -235,20 +235,23 @@ static Shape read_brep(const std::string& filepath) {
 
 void register_io(nb::module_& m) {
     OSD::SetSignal(Standard_False);  // OCCT faults -> catchable exceptions (FP masked for the host process)
-    m.def("read_step", &read_step);
+    // File I/O (STEP/IGES/STL/BREP) is slow and pure C++ -> release the GIL throughout so it
+    // overlaps with other Python threads and parallel writes/reads.
+    using gil = nb::call_guard<nb::gil_scoped_release>;
+    m.def("read_step", &read_step, gil());
     m.def("write_step", &write_step,
-          "shape"_a, "filepath"_a, "unit"_a = "MM", "name"_a = "", "author"_a = "", "organization"_a = "", "description"_a = "");
+          "shape"_a, "filepath"_a, "unit"_a = "MM", "name"_a = "", "author"_a = "", "organization"_a = "", "description"_a = "", gil());
     m.def("write_step_with_attributes", &write_step_with_attributes,
           "shape"_a, "filepath"_a, "name"_a = "",
           "strings"_a = std::map<std::string, std::string>{},
           "integers"_a = std::map<std::string, int>{},
-          "reals"_a = std::map<std::string, double>{});
-    m.def("read_step_with_attributes", &read_step_with_attributes, "filepath"_a);
-    m.def("edge_to_step", &shape_to_step, "shape"_a, "filepath"_a, "schema"_a = "AP203");
-    m.def("face_to_step", &shape_to_step, "shape"_a, "filepath"_a, "schema"_a = "AP203");
-    m.def("read_iges", &read_iges);
-    m.def("write_iges", &write_iges);
-    m.def("write_stl", &write_stl, "shape"_a, "filepath"_a, "linear_deflection"_a = 1e-3, "angular_deflection"_a = 0.5);
-    m.def("write_brep", &write_brep);
-    m.def("read_brep", &read_brep);
+          "reals"_a = std::map<std::string, double>{}, gil());
+    m.def("read_step_with_attributes", &read_step_with_attributes, "filepath"_a, gil());
+    m.def("edge_to_step", &shape_to_step, "shape"_a, "filepath"_a, "schema"_a = "AP203", gil());
+    m.def("face_to_step", &shape_to_step, "shape"_a, "filepath"_a, "schema"_a = "AP203", gil());
+    m.def("read_iges", &read_iges, gil());
+    m.def("write_iges", &write_iges, gil());
+    m.def("write_stl", &write_stl, "shape"_a, "filepath"_a, "linear_deflection"_a = 1e-3, "angular_deflection"_a = 0.5, gil());
+    m.def("write_brep", &write_brep, gil());
+    m.def("read_brep", &read_brep, gil());
 }
