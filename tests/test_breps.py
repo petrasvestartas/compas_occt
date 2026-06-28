@@ -46,3 +46,21 @@ def test_brep_from_sphere():
 
     assert TOL.is_close(sphere.volume, brep.volume)
     assert sphere.frame.point == brep.centroid
+
+
+def test_brep_caches_invalidated_on_transform():
+    """In-place transform must invalidate the cached topology and properties."""
+    from compas.geometry import Translation
+
+    brep = OCCBrep.from_box(Box(1))
+    # populate the caches
+    v_before = brep.faces[0].vertices[0].point
+    c_before = brep.centroid
+
+    brep.transform(Translation.from_vector([10, 0, 0]))
+
+    # cached topology + centroid must reflect the moved geometry, not the stale one
+    assert TOL.is_close(brep.faces[0].vertices[0].point.x, v_before.x + 10)
+    assert TOL.is_close(brep.centroid.x, c_before.x + 10)
+    # rigid transform preserves volume
+    assert TOL.is_close(brep.volume, 1.0)

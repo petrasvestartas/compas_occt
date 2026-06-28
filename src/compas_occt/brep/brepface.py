@@ -101,6 +101,7 @@ class OCCBrepFace(BrepFace):
         self.precision = 1e-6
         self._surface = None
         self._nurbssurface = None
+        self._domain = None
         self._occ_face = occ_face
 
     def __eq__(self, other: "OCCBrepFace") -> bool:
@@ -162,6 +163,7 @@ class OCCBrepFace(BrepFace):
     def occ_face(self, face) -> None:
         self._surface = None
         self._nurbssurface = None
+        self._domain = None
         self._occ_face = face
 
     @property
@@ -269,12 +271,16 @@ class OCCBrepFace(BrepFace):
 
     @property
     def domain_u(self) -> tuple[float, float]:
-        umin, umax, _, _ = _brep.face_domain(self.occ_face)
+        if self._domain is None:
+            self._domain = _brep.face_domain(self.occ_face)
+        umin, umax, _, _ = self._domain
         return umin, umax
 
     @property
     def domain_v(self) -> tuple[float, float]:
-        _, _, vmin, vmax = _brep.face_domain(self.occ_face)
+        if self._domain is None:
+            self._domain = _brep.face_domain(self.occ_face)
+        _, _, vmin, vmax = self._domain
         return vmin, vmax
 
     # ==============================================================================

@@ -150,6 +150,11 @@ class OCCBrep(Brep):
         self._faces = None
         self._shells = None
         self._solids = None
+        self._aabb = None
+        self._obb = None
+        self._area = None
+        self._volume = None
+        self._centroid = None
 
     @property
     def native_brep(self):
@@ -290,26 +295,33 @@ class OCCBrep(Brep):
 
     @property
     def area(self) -> float:
-        self._area = _brep.area(self.native_brep)
+        if self._area is None:
+            self._area = _brep.area(self.native_brep)
         return self._area
 
     @property
     def volume(self) -> float:
-        self._volume = _brep.volume(self.occ_shape)
+        if self._volume is None:
+            self._volume = _brep.volume(self.occ_shape)
         return self._volume
 
     @property
     def centroid(self) -> Point:
-        self._centroid = point_to_compas(_brep.centroid(self.occ_shape))
+        if self._centroid is None:
+            self._centroid = point_to_compas(_brep.centroid(self.occ_shape))
         return self._centroid
 
     @property
     def aabb(self) -> Box:
-        return aabb_to_compas(_brep.aabb(self.native_brep, False))
+        if self._aabb is None:
+            self._aabb = aabb_to_compas(_brep.aabb(self.native_brep, False))
+        return self._aabb
 
     @property
     def obb(self) -> Box:
-        return obb_to_compas(_brep.obb(self.native_brep))
+        if self._obb is None:
+            self._obb = obb_to_compas(_brep.obb(self.native_brep))
+        return self._obb
 
     @property
     def convex_hull(self) -> Mesh:
@@ -1725,7 +1737,7 @@ class OCCBrep(Brep):
         None
 
         """
-        self._occ_shape = _brep.transform(self.occ_shape, compas_transformation_to_trsf(matrix), True)
+        self.occ_shape = _brep.transform(self.occ_shape, compas_transformation_to_trsf(matrix), True)
 
     def transformed(self, matrix: compas.geometry.Transformation) -> "OCCBrep":
         """
