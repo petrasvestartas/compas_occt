@@ -68,10 +68,17 @@ def _finalize_boolean(brep: "OCCBrep") -> "OCCBrep":
     once ``.solids`` reports nothing, and ``.volume`` then silently sums every
     fragment instead of measuring the part.
 
-    So the result is left as the kernel produced it, with one exception: a
-    compound holding exactly one solid is unwrapped to that solid. That is the
-    common case, and returning the solid itself rather than a compound wrapping
-    it is what makes ``.is_solid`` and ``.volume`` answer correctly.
+    So a result that carries solids is left as the kernel produced it, with one
+    exception: a compound holding exactly one solid is unwrapped to that solid.
+    That is the common case, and returning the solid itself rather than a
+    compound wrapping it is what makes ``.is_solid`` and ``.volume`` answer
+    correctly.
+
+    A result with NO solids is a different matter. Boolean operands are not
+    always closed - cutting one open shell with another gives back loose faces,
+    which have no solid structure to preserve and genuinely do want sewing into
+    a shell. That case keeps the original heal-then-solidify behaviour, so open
+    input behaves exactly as it did before.
 
     Parameters
     ----------
@@ -87,10 +94,19 @@ def _finalize_boolean(brep: "OCCBrep") -> "OCCBrep":
         # A shell result is the one case that genuinely needs rewrapping.
         brep.make_solid()
         return brep
-    if brep.type == COMPOUND:
-        solids = _brep.shape_explore(brep.occ_shape, 2)
-        if len(solids) == 1:
-            return type(brep).from_native(solids[0])
+
+    solids = _brep.shape_explore(brep.occ_shape, 2)
+
+    if not solids:
+        # No solid structure to protect: this is the open-shape case, where
+        # sewing the loose faces back into a shell is the right thing to do.
+        brep.heal()
+        brep.make_solid()
+        return brep
+
+    if len(solids) == 1 and brep.type == COMPOUND:
+        return type(brep).from_native(solids[0])
+
     return brep
 
 

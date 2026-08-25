@@ -133,7 +133,12 @@ build-frontend = "pip"
 # manylinux2014/manylinux_2_17 ones), so on a manylinux2014 image pip falls back to building
 # scipy from source and fails with "Dependency 'OpenBLAS' not found". OCCT itself needs no BLAS.
 manylinux-x86_64-image = "manylinux_2_28"
-# We build a single stable-ABI (abi3) wheel via wheel.py-api = "cp312"; do NOT skip cp312.
+# We build a single stable-ABI (abi3) wheel via wheel.py-api = "cp312", so cp312 is the ONLY
+# interpreter worth building on: every other CPython version produced a byte-identical
+# cp312-abi3 wheel that just overwrote the previous one, at the cost of a full OCCT rebuild
+# each time. Restricting to cp312 also drops cp39, which no longer builds at all now that
+# nanobind requires Python 3.10+ ("nanobind requires Python 3.10 or newer (found 3.9.21)").
+build = ["cp312-*"]
 skip = ["*_i686", "*-musllinux_*", "*-win32", "pp*"]
 macos.environment.MACOSX_DEPLOYMENT_TARGET = "11.00"
 # Each macOS wheel is built natively on its own runner (mac-intel -> x86_64, mac-arm -> arm64);

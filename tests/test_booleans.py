@@ -1,4 +1,5 @@
 from compas.geometry import Box
+from compas.geometry import Polygon
 from compas.tolerance import TOL
 from compas_occt.brep import OCCBrep
 
@@ -84,3 +85,22 @@ def test_boolean_union_of_touching_boxes_is_a_solid():
     assert union.is_solid
     assert len(union.solids) == 1
     assert TOL.is_close(union.volume, 16.0)
+
+
+def test_boolean_difference_of_open_shapes_is_still_sewn():
+    """Open operands have no solids to protect, and do want sewing.
+
+    A boolean between shapes that are not closed comes back as loose faces. That
+    is the one case where healing the result is right, so it keeps the original
+    behaviour - only results that carry solids are left as the kernel built them.
+    """
+    sheet = OCCBrep.from_polygons(
+        [Polygon([[0, 0, 0], [10, 0, 0], [10, 10, 0], [0, 10, 0]])],
+        solid=False,
+    )
+    knife = OCCBrep.from_box(Box(4))  # spans -2..2, so it removes a 2x2 corner
+
+    diff = sheet - knife
+
+    assert not diff.solids
+    assert TOL.is_close(diff.area, 100.0 - 4.0)
