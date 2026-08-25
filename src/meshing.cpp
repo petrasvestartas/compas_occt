@@ -39,6 +39,7 @@
 #include <gp.hxx>
 
 #include <cmath>
+#include <optional>
 
 // Tessellate a shape -> (vertices (V,3) float64, triangles (T,3) int32, edge-polylines).
 // Vertices/triangles are returned as zero-copy numpy arrays. Triangle winding is flipped for
@@ -168,6 +169,25 @@ static bool polygon_is_planar(const std::vector<Triple>& points, double tol) {
     return true;
 }
 
+// The planar face for a flat polygon, or nothing if OCCT declines to build one.
+//
+// polygon_is_planar already rejects the degenerate cases, but a planar polygon
+// can still be un-faceable (a self-intersecting "bowtie" outline, say), and
+// BRepBuilderAPI_MakeFace signals that by leaving IsDone() false and handing
+// back a null face. Checking it here is what lets the callers below treat the
+// planar path as an optimisation they can always fall back out of, rather than
+// a commitment made before the face is known to exist.
+static std::optional<Shape> try_planar_face(const std::vector<Triple>& points, double tol) {
+    if (!polygon_is_planar(points, tol)) return std::nullopt;
+
+    BRepBuilderAPI_MakePolygon polygon;
+    for (const auto& p : points) polygon.Add(to_pnt(p));
+    polygon.Close();
+    BRepBuilderAPI_MakeFace face(polygon.Wire());
+    if (!face.IsDone()) return std::nullopt;
+    return Shape(face.Face());
+}
+
 static Shape triangle_to_face(const std::vector<Triple>& points) {
     return polygon_to_planar_face(points);
 }
@@ -177,7 +197,7 @@ static Shape triangle_to_face(const std::vector<Triple>& points) {
 // downstream planarity test, which costs callers the cheap planar filters they
 // would otherwise use. Only a genuinely twisted quad needs the ruled surface.
 static Shape quad_to_face(const std::vector<Triple>& points, double tol) {
-    if (polygon_is_planar(points, tol)) return polygon_to_planar_face(points);
+    if (auto face = try_planar_face(points, tol)) return *face;
 
     TColgp_Array1OfPnt a1(1, 2);
     a1.SetValue(1, to_pnt(points[0]));
@@ -195,7 +215,7 @@ static Shape quad_to_face(const std::vector<Triple>& points, double tol) {
 // BRepFill_Filling, an n-sided patch solve, where a flat n-gon only ever needed
 // a wire on a plane.
 static Shape ngon_to_face(const std::vector<Triple>& points, double tol) {
-    if (polygon_is_planar(points, tol)) return polygon_to_planar_face(points);
+    if (auto face = try_planar_face(points, tol)) return *face;
 
     BRepBuilderAPI_MakePolygon polygon;
     for (const auto& p : points) polygon.Add(to_pnt(p));
