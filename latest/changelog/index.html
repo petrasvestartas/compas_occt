@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../public/favicon.ico">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -5142,6 +5142,30 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">¤</a></h2>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">¤</a></h3>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">¤</a></h3>
+<ul>
+<li>Booleans no longer sew or heal their result. An OCCT boolean already returns a valid shape --
+  normally a COMPOUND holding one solid per connected piece -- and sewing that compound flattened
+  it into loose shells. Because <code>make_solid()</code> only rewraps a shape whose own type is <code>SHELL</code>, the
+  compound was then skipped entirely, so a boolean that split its target came back with
+  <code>.solids == []</code> and <code>.is_solid == False</code> even though the operation had succeeded. Selecting the
+  real body out of a fragmenting cut (a carved part plus slivers) was therefore impossible, and
+  <code>.volume</code> silently summed every fragment instead of measuring one part. Affects all six entry
+  points: <code>from_boolean_difference</code> / <code>_intersection</code> / <code>_union</code> and the <code>boolean_*</code> methods. A
+  result holding exactly one solid is now unwrapped to that solid, so <code>.is_solid</code> and <code>.volume</code>
+  answer correctly in the common case too.</li>
+<li>Performance and exactness: <code>quad_to_face</code> and <code>ngon_to_face</code> now build a <strong>planar</strong> face when
+  their input points are coplanar (within <code>Precision::Confusion()</code>), instead of always fitting a
+  surface -- a ruled surface for quads, a <code>BRepFill_Filling</code> n-sided patch for n-gons. Flat input
+  is the overwhelmingly common case and it has a plane; fitting a surface to it was slow, less
+  exact, and invisible to <code>face.is_plane</code>, so callers lost the cheap planar filters that face
+  comparison and contact detection rely on. Measured on a 145-part timber model, through the
+  public <code>OCCBrep.from_polygons</code> API: face construction 2.95 ms -&gt; 0.105 ms (28x), building all
+  145 solids 4.43 s -&gt; 0.62 s (7.1x), and the same solids through a boolean cut 34.9 s -&gt; 3.2 s
+  (10.9x), with no change in volume -- all 1190 faces come back planar, and a carved column
+  reproduces its reference volume to 1.4e-13.
+  Genuinely warped input still takes the fitted-surface path. Both functions take an optional
+  <code>tol</code> argument controlling the flatness threshold.</li>
+</ul>
 <h3 id="removed">Removed<a class="headerlink" href="#removed" title="Permanent link">¤</a></h3>
 <h2 id="0118-2026-06-28">[0.1.18] 2026-06-28<a class="headerlink" href="#0118-2026-06-28" title="Permanent link">¤</a></h2>
 <h3 id="added_1">Added<a class="headerlink" href="#added_1" title="Permanent link">¤</a></h3>
@@ -5420,7 +5444,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["content.code.copy", "content.footnote.tooltips", "navigation.expand", "navigation.footer", "navigation.indexes", "navigation.sections", "navigation.top", "search.highlight", "search.suggest", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
