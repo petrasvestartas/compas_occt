@@ -1,5 +1,11 @@
 [build-system]
-requires = ["scikit-build-core >=0.10", "nanobind >=1.3.2"]
+# cmake and ninja belong HERE, not in cibuildwheel's before-build. scikit-build-core
+# runs inside pip's isolated build environment and probes cmake from there, so a
+# cmake installed into the surrounding venv is only half-present: its console script
+# is on PATH, but the `cmake` Python module it imports is not importable from the
+# isolated env, and the probe fails with
+#   Could not determine CMake version via --version ... ModuleNotFoundError: No module named 'cmake'
+requires = ["scikit-build-core >=0.10", "nanobind >=1.3.2", "cmake >=3.15", "ninja"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -127,7 +133,12 @@ build-frontend = "pip"
 # manylinux2014/manylinux_2_17 ones), so on a manylinux2014 image pip falls back to building
 # scipy from source and fails with "Dependency 'OpenBLAS' not found". OCCT itself needs no BLAS.
 manylinux-x86_64-image = "manylinux_2_28"
-# We build a single stable-ABI (abi3) wheel via wheel.py-api = "cp312"; do NOT skip cp312.
+# We build a single stable-ABI (abi3) wheel via wheel.py-api = "cp312", so cp312 is the ONLY
+# interpreter worth building on: every other CPython version produced a byte-identical
+# cp312-abi3 wheel that just overwrote the previous one, at the cost of a full OCCT rebuild
+# each time. Restricting to cp312 also drops cp39, which no longer builds at all now that
+# nanobind requires Python 3.10+ ("nanobind requires Python 3.10 or newer (found 3.9.21)").
+build = ["cp312-*"]
 skip = ["*_i686", "*-musllinux_*", "*-win32", "pp*"]
 macos.environment.MACOSX_DEPLOYMENT_TARGET = "11.00"
 # Each macOS wheel is built natively on its own runner (mac-intel -> x86_64, mac-arm -> arm64);
@@ -135,13 +146,11 @@ macos.environment.MACOSX_DEPLOYMENT_TARGET = "11.00"
 # architecture-specific static libraries (a fat/universal2 OCCT build conflicts with its PCH).
 
 # Pre-installation dependencies for wheel building. Only the build toolchain is needed here:
-# scikit-build-core + nanobind already come from [build-system].requires (installed into the
-# isolated build env), so we add just cmake/ninja. We deliberately do NOT install
-# requirements-dev.txt here -- it is dev-only tooling (lint/release/test helpers), none of which
-# is needed to build the wheel (test deps are declared separately in test-requires).
-before-build = [
-    "pip install cmake ninja",
-]
+# No before-build step: every build dependency (scikit-build-core, nanobind, cmake, ninja)
+# comes from [build-system].requires, which is the only place scikit-build-core can actually
+# see them. We deliberately do NOT install requirements-dev.txt either -- it is dev-only
+# tooling (lint/release/test helpers), none of which is needed to build the wheel (test deps
+# are declared separately in test-requires).
 
 # Control memory usage during builds
 environment.CMAKE_BUILD_PARALLEL_LEVEL = "2"

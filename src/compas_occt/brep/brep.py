@@ -53,6 +53,63 @@ def _shape_list(items) -> list:
     return [items.native_brep]
 
 
+def _finalize_boolean(brep: "OCCBrep") -> "OCCBrep":
+    """Post-process the result of an OCCT boolean operation.
+
+    An OCCT boolean already returns a valid shape - normally a COMPOUND holding
+    one solid per connected piece of the result. Sewing that is not a repair, it
+    is damage: ``sew()`` flattens the compound into loose shells, and
+    ``make_solid()`` only rewraps a shape whose own type is SHELL, so a compound
+    is skipped entirely. The result is a Brep whose ``.solids`` is empty and
+    whose ``.is_solid`` is False, even though the operation succeeded.
+
+    That matters most for a cut that fragments its target - a carved part plus
+    slivers - because selecting the real body out of the pieces is impossible
+    once ``.solids`` reports nothing, and ``.volume`` then silently sums every
+    fragment instead of measuring the part.
+
+    So a result that carries solids is left as the kernel produced it, with one
+    exception: a compound holding exactly one solid is unwrapped to that solid.
+    That is the common case, and returning the solid itself rather than a
+    compound wrapping it is what makes ``.is_solid`` and ``.volume`` answer
+    correctly.
+
+    A result with NO solids is a different matter. Boolean operands are not
+    always closed - cutting one open shell with another gives back loose faces,
+    which have no solid structure to preserve and genuinely do want sewing into
+    a shell. That case keeps the original heal-then-solidify behaviour, so open
+    input behaves exactly as it did before.
+
+    Parameters
+    ----------
+    brep
+        The Brep wrapping the raw boolean result.
+
+    Returns
+    -------
+    OCCBrep
+
+    """
+    if brep.type == SHELL:
+        # A shell result is the one case that genuinely needs rewrapping.
+        brep.make_solid()
+        return brep
+
+    solids = _brep.shape_explore(brep.occ_shape, 2)
+
+    if not solids:
+        # No solid structure to protect: this is the open-shape case, where
+        # sewing the loose faces back into a shell is the right thing to do.
+        brep.heal()
+        brep.make_solid()
+        return brep
+
+    if len(solids) == 1 and brep.type == COMPOUND:
+        return type(brep).from_native(solids[0])
+
+    return brep
+
+
 class OCCBrep(Brep):
     """
     Class for Boundary Representation of geometric entities.
@@ -1002,10 +1059,7 @@ class OCCBrep(Brep):
         tol = tol or TOL.absolute
         shape = _brep.boolean_difference(_shape_list(A), _shape_list(B), tol)
         brep = cls.from_native(shape)
-        brep.sew()
-        brep.fix()
-        brep.make_solid()
-        return brep
+        return _finalize_boolean(brep)
 
     @classmethod
     def from_boolean_intersection(
@@ -1039,9 +1093,7 @@ class OCCBrep(Brep):
         except RuntimeError as e:
             raise BrepBooleanError(str(e))
         brep = cls.from_native(shape)
-        brep.heal()
-        brep.make_solid()
-        return brep
+        return _finalize_boolean(brep)
 
     @classmethod
     def from_boolean_union(
@@ -1075,9 +1127,7 @@ class OCCBrep(Brep):
         except RuntimeError as e:
             raise BrepBooleanError(str(e))
         brep = cls.from_native(shape)
-        brep.heal()
-        brep.make_solid()
-        return brep
+        return _finalize_boolean(brep)
 
     # ==============================================================================
     # Converters
@@ -1298,9 +1348,7 @@ class OCCBrep(Brep):
             raise BrepBooleanError(str(e))
         cls = type(self)
         brep = cls.from_native(shape)
-        brep.heal()
-        brep.make_solid()
-        return brep
+        return _finalize_boolean(brep)
 
     def boolean_intersection(self, *others: "OCCBrep", tol=None) -> "OCCBrep":
         """Return the boolean intersection of the current shape and a collection of other shapes.
@@ -1327,9 +1375,7 @@ class OCCBrep(Brep):
             raise BrepBooleanError(str(e))
         cls = type(self)
         brep = cls.from_native(shape)
-        brep.heal()
-        brep.make_solid()
-        return brep
+        return _finalize_boolean(brep)
 
     def boolean_union(self, *others: "OCCBrep", tol=None) -> "OCCBrep":
         """Return the boolean union of the current shape and a collection of other shapes.
@@ -1356,9 +1402,7 @@ class OCCBrep(Brep):
             raise BrepBooleanError(str(e))
         cls = type(self)
         brep = cls.from_native(shape)
-        brep.heal()
-        brep.make_solid()
-        return brep
+        return _finalize_boolean(brep)
 
     def check(self):
         """
