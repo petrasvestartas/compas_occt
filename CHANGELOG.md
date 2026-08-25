@@ -11,6 +11,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Booleans no longer sew or heal their result. An OCCT boolean already returns a valid shape --
+  normally a COMPOUND holding one solid per connected piece -- and sewing that compound flattened
+  it into loose shells. Because `make_solid()` only rewraps a shape whose own type is `SHELL`, the
+  compound was then skipped entirely, so a boolean that split its target came back with
+  `.solids == []` and `.is_solid == False` even though the operation had succeeded. Selecting the
+  real body out of a fragmenting cut (a carved part plus slivers) was therefore impossible, and
+  `.volume` silently summed every fragment instead of measuring one part. Affects all six entry
+  points: `from_boolean_difference` / `_intersection` / `_union` and the `boolean_*` methods. A
+  result holding exactly one solid is now unwrapped to that solid, so `.is_solid` and `.volume`
+  answer correctly in the common case too.
+- Performance and exactness: `quad_to_face` and `ngon_to_face` now build a **planar** face when
+  their input points are coplanar (within `Precision::Confusion()`), instead of always fitting a
+  surface -- a ruled surface for quads, a `BRepFill_Filling` n-sided patch for n-gons. Flat input
+  is the overwhelmingly common case and it has a plane; fitting a surface to it was slow, less
+  exact, and invisible to `face.is_plane`, so callers lost the cheap planar filters that face
+  comparison and contact detection rely on. Measured on a 145-part timber model: face
+  construction 2.95 ms -> 0.105 ms (28x), building all 145 solids 4.37 s -> 0.37 s (11.8x), and
+  the same solids through a boolean cut 34.9 s -> 3.45 s (10.1x), with no change in volume.
+  Genuinely warped input still takes the fitted-surface path. Both functions take an optional
+  `tol` argument controlling the flatness threshold.
+
 ### Removed
 
 ## [0.1.18] 2026-06-28
