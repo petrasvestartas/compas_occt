@@ -26,9 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   surface -- a ruled surface for quads, a `BRepFill_Filling` n-sided patch for n-gons. Flat input
   is the overwhelmingly common case and it has a plane; fitting a surface to it was slow, less
   exact, and invisible to `face.is_plane`, so callers lost the cheap planar filters that face
-  comparison and contact detection rely on. Measured on a 145-part timber model: face
-  construction 2.95 ms -> 0.105 ms (28x), building all 145 solids 4.37 s -> 0.37 s (11.8x), and
-  the same solids through a boolean cut 34.9 s -> 3.45 s (10.1x), with no change in volume.
+  comparison and contact detection rely on. Measured on a 145-part timber model, through the
+  public `OCCBrep.from_polygons` API: face construction 2.95 ms -> 0.105 ms (28x), building all
+  145 solids 4.43 s -> 0.62 s (7.1x), and the same solids through a boolean cut 34.9 s -> 3.2 s
+  (10.9x), with no change in volume -- all 1190 faces come back planar, and a carved column
+  reproduces its reference volume to 1.4e-13.
   Genuinely warped input still takes the fitted-surface path. Both functions take an optional
   `tol` argument controlling the flatness threshold.
 
