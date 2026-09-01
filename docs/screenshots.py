@@ -117,13 +117,30 @@ def _render_one(example: str, out: str) -> None:
                 zoom_selected(self)  # zoom-extents (the "F" key) -> orientation + target
                 cam = self.renderer.camera
 
-                # fit the bounding box exactly into the frame (fov + aspect), no cropping
-                boxes = [o.bounding_box for o in self.scene.objects if getattr(o, "bounding_box", None) is not None]
-                if boxes:
-                    pts = np.asarray(boxes, dtype=float).reshape(-1, 3)
+                # fit the drawn geometry exactly into the frame (fov + aspect), no cropping
+                def drawn_points(o):
+                    """The points actually rendered for an object, or its bounding box.
+
+                    Fitting the bounding box of a round object wastes the better part of the
+                    frame: the corners of the box stick out well past the silhouette. The
+                    vertices that get drawn - the tessellation of a Brep, the points of a
+                    polyline - are the silhouette, so prefer those and keep the box as the
+                    fallback for anything that does not expose them.
+                    """
+                    points = list(getattr(o, "points", None) or [])
+                    viewmesh = getattr(o, "viewmesh", None)
+                    if isinstance(viewmesh, (tuple, list)) and len(viewmesh) == 2:
+                        points += list(viewmesh[0] or [])
+                    if points:
+                        return points
+                    box = getattr(o, "bounding_box", None)
+                    return list(box) if box is not None else []
+
+                drawn = [point for o in self.scene.objects for point in drawn_points(o)]
+                if drawn:
+                    pts = np.asarray(drawn, dtype=float).reshape(-1, 3)
                     lo, hi = pts.min(0), pts.max(0)
                     target = (lo + hi) / 2.0
-                    corners = np.array([[x, y, z] for x in (lo[0], hi[0]) for y in (lo[1], hi[1]) for z in (lo[2], hi[2])])
                     to_cam = np.asarray(cam.position, dtype=float) - target
                     to_cam /= np.linalg.norm(to_cam) or 1.0
                     forward = -to_cam
@@ -131,11 +148,18 @@ def _render_one(example: str, out: str) -> None:
                     right = np.cross(forward, up0)
                     right /= np.linalg.norm(right) or 1.0
                     up = np.cross(right, forward)
-                    rel = corners - target
+                    rel = pts - target
                     tan_v = math.tan(math.radians(cam.fov) / 2.0)
                     aspect = self.renderer.width() / max(self.renderer.height(), 1)
-                    distance = max(np.abs(rel @ up).max() / tan_v, np.abs(rel @ right).max() / (tan_v * aspect))
-                    distance = distance * 1.05 + np.abs(rel @ forward).max()  # margin + depth
+                    # A point is in frame when |rel . up| <= tan_v * depth, and its depth is
+                    # distance + rel . forward. Solving that per point and taking the largest
+                    # is what fits them all; maxing the two terms separately (as this used to)
+                    # sums the extent of one point with the depth of another, and pushes the
+                    # camera much too far back.
+                    depth = rel @ forward
+                    reach_v = np.abs(rel @ up) / tan_v - depth
+                    reach_h = np.abs(rel @ right) / (tan_v * aspect) - depth
+                    distance = max(reach_v.max(), reach_h.max()) * 1.05  # margin
                     cam.target = target.tolist()
                     cam.position = (target + to_cam * distance).tolist()
                     self.renderer.update()

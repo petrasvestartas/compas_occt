@@ -153,6 +153,7 @@ nav:
           - Brep Slice: examples/breps/brep_slice.md
           - Brep Split: examples/breps/brep_split.md
           - Brep Step Attributes: examples/breps/brep_step_attributes.md
+          - Brep To Polylines: examples/breps/brep_to_polylines.md
           - Brep Trim: examples/breps/brep_trim.md
           - Brep With Hole: examples/breps/brep_with_hole.md
           - Brep With Holes: examples/breps/brep_with_holes.md
