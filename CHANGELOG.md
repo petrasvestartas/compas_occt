@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- `OCCBrep.to_curves()` converts the edges of a Brep to COMPAS curves -- a `Line` for a straight
+  edge, a `Circle` for a circular one, and so on, down to a `NurbsCurve` for a general B-spline
+  edge. Unlike the `edges` and `curves` attributes it reports each edge once: exploring a shape
+  for edges visits every face, so an edge shared by two faces came back twice, and a box handed
+  back 24 curves for its 12 edges. Repeats are filtered by `is_same`, bucketed by endpoint
+  coordinates first so the pass stays linear on large models instead of quadratic.
+- `OCCBrep.to_polylines()` converts a Brep whose faces are all flat polygons to one closed
+  polyline per face loop, the outer loop of a face preceding its holes. Such a Brep is fully
+  described by the points of its loops, so nothing is lost; anything else -- a cylinder, a sphere,
+  a planar face with an arc in its boundary -- would silently lose its curvature, so the
+  conversion raises `BrepError` naming the offending face rather than approximating it. This is
+  the guarantee `to_polygons()` does not make: that method reduces the outer loop of every face
+  whatever its geometry.
+- `OCCBrep.is_polygonal` and `OCCBrepFace.is_polygon` report whether the faces are flat polygons,
+  so the precondition of `to_polylines()` can be checked up front. A face is a flat polygon when
+  both its surface and every bounding edge carry the corresponding exact geometry -- a plane and
+  straight lines -- which is what makes its vertices a faithful description of it.
+
+### Changed
+
+### Removed
+
 ## [0.1.19] 2026-08-25
 
 ### Added

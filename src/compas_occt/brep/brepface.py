@@ -237,6 +237,19 @@ class OCCBrepFace(BrepFace):
     # other
 
     @property
+    def is_polygon(self) -> bool:
+        """A flat polygon: a planar face bounded by straight edges only.
+
+        A face that merely *looks* flat is not enough. Both the underlying surface and
+        every bounding edge have to carry the corresponding exact geometry, because that
+        is what makes the vertices of the face a faithful description of it.
+
+        """
+        if not self.is_plane:
+            return False
+        return all(edge.is_line for edge in self.edges)
+
+    @property
     def vertices(self) -> list[OCCBrepVertex]:
         return [OCCBrepVertex(vertex) for vertex in _brep.shape_explore(self.occ_face, 7)]
 

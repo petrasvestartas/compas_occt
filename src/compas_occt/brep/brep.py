@@ -44,6 +44,7 @@ from .brepface import OCCBrepFace
 from .breploop import OCCBrepLoop
 from .brepvertex import OCCBrepVertex
 from .errors import BrepBooleanError
+from .errors import BrepError
 from .errors import BrepFilletError
 
 
@@ -51,6 +52,42 @@ def _shape_list(items) -> list:
     if isinstance(items, list):
         return [item.native_brep for item in items]
     return [items.native_brep]
+
+
+def _edge_endpoint_key(edge: OCCBrepEdge) -> Optional[tuple]:
+    """The unordered endpoint coordinates of an edge, or None if it has none."""
+    try:
+        a = TOL.geometric_key(edge.first_vertex.point)
+        b = TOL.geometric_key(edge.last_vertex.point)
+    except RuntimeError:
+        # An unbounded edge -- one built from an infinite line, say -- has vertices
+        # without a point. There is nothing to key on, and such edges are rare enough
+        # that sharing a single bucket costs nothing.
+        return None
+    return (a, b) if a <= b else (b, a)
+
+
+def _unique_edges(edges: list[OCCBrepEdge]) -> list[OCCBrepEdge]:
+    """Filter out the repeated occurrences of the same edge.
+
+    Exploring a shape for edges visits every face, so an edge shared by two faces
+    comes back twice. Identity is decided by :meth:`OCCBrepEdge.is_same`, but calling
+    that against everything seen so far is quadratic, which is painful on large models.
+    Edges are therefore bucketed first by their (unordered) endpoint coordinates, and
+    ``is_same`` only has to separate the few edges that land in the same bucket.
+    Repeated occurrences share a single underlying shape, so their coordinates -- and
+    hence their bucket -- are identical.
+
+    """
+    buckets: dict[Optional[tuple], list[OCCBrepEdge]] = {}
+    unique = []
+    for edge in edges:
+        bucket = buckets.setdefault(_edge_endpoint_key(edge), [])
+        if any(edge.is_same(other) for other in bucket):
+            continue
+        bucket.append(edge)
+        unique.append(edge)
+    return unique
 
 
 def _finalize_boolean(brep: "OCCBrep") -> "OCCBrep":
@@ -272,6 +309,21 @@ class OCCBrep(Brep):
     @property
     def is_surface(self) -> bool:
         return False
+
+    @property
+    def is_polygonal(self) -> bool:
+        """True if every face of the Brep is a flat polygon.
+
+        This is the precondition of :meth:`to_polylines`: a Brep whose faces are all
+        planar and bounded by straight edges is fully described by the vertices of its
+        loops, so nothing is lost by reducing it to polylines. A Brep without faces is
+        not polygonal.
+
+        """
+        faces = self.faces
+        if not faces:
+            return False
+        return all(face.is_polygon for face in faces)
 
     # ==============================================================================
     # Geometric Components
@@ -1201,6 +1253,88 @@ class OCCBrep(Brep):
                 points.append(vertex.point)
             polygons.append(Polygon(points))
         return polygons
+
+    def to_curves(self) -> list[compas.geometry.Curve]:
+        """
+        Convert the edges of the BRep to curves.
+
+        Every edge is converted to the COMPAS geometry matching its underlying curve:
+        a :class:`compas.geometry.Line` for a straight edge, a
+        :class:`compas.geometry.Circle` for a circular one, and so on, falling back to a
+        :class:`compas.geometry.NurbsCurve` for a general B-spline edge. Trimming is
+        respected -- the curve spans the edge, not the full underlying geometry.
+
+        Unlike the :attr:`edges` and :attr:`curves` attributes, each edge is reported
+        once, even where it is shared by two faces.
+
+        Returns
+        -------
+        list[compas.geometry.Curve]
+            One curve per unique edge.
+
+        Raises
+        ------
+        NotImplementedError
+            If an edge has a curve type that cannot be converted.
+
+        Examples
+        --------
+        >>> from compas.geometry import Box
+        >>> from compas_occt.brep import OCCBrep
+        >>> brep = OCCBrep.from_box(Box(1))
+        >>> curves = brep.to_curves()
+        >>> len(curves)
+        12
+
+        """
+        return [edge.curve for edge in _unique_edges(self.edges)]
+
+    def to_polylines(self) -> list[Polyline]:
+        """
+        Convert the faces of the BRep to closed polylines.
+
+        One polyline is produced per loop of every face, in face order, with the outer
+        loop of a face preceding its inner loops (the holes). Each polyline is closed:
+        its last point repeats its first.
+
+        The conversion is only lossless if every face is a flat polygon, so it is
+        refused otherwise. Use :attr:`is_polygonal` to check up front, or
+        :meth:`to_polygons` to reduce the faces regardless of their geometry.
+
+        Returns
+        -------
+        list[Polyline]
+            One closed polyline per face loop.
+
+        Raises
+        ------
+        BrepError
+            If the Brep has no faces, or if any of them is not a flat polygon.
+
+        Examples
+        --------
+        >>> from compas.geometry import Box
+        >>> from compas_occt.brep import OCCBrep
+        >>> brep = OCCBrep.from_box(Box(1))
+        >>> polylines = brep.to_polylines()
+        >>> len(polylines)
+        6
+        >>> all(polyline.is_closed for polyline in polylines)
+        True
+
+        """
+        faces = self.faces
+        if not faces:
+            raise BrepError("The Brep has no faces to convert to polylines.")
+
+        polylines = []
+        for index, face in enumerate(faces):
+            if not face.is_polygon:
+                raise BrepError(f"Face {index} is not a flat polygon, so the Brep cannot be converted to polylines.")
+            for loop in [face.outerloop] + face.innerloops:
+                points = [vertex.point for vertex in loop.vertices]
+                polylines.append(Polyline(points + [points[0]]))
+        return polylines
 
     def to_viewmesh(
         self,

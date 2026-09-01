@@ -61,6 +61,39 @@ union = a + b
 print(union.is_solid, union.volume, union.area)
 ```
 
+A Brep can also be reduced to the wire geometry of its boundary. `to_curves()` converts every
+edge to the COMPAS curve matching its underlying geometry -- a `Line` for a straight edge, a
+`Circle` for a circular one, and so on -- reporting each edge once even where two faces share it.
+
+```python
+from compas.geometry import Cylinder
+from compas_occt.brep import OCCBrep
+
+brep = OCCBrep.from_cylinder(Cylinder(radius=1, height=2))
+
+for curve in brep.to_curves():
+    print(type(curve).__name__)
+```
+
+`to_polylines()` is the flat-polygon case of the same idea. A Brep whose faces are all planar and
+bounded by straight edges is fully described by the points of its loops, so it converts to one
+closed polyline per loop -- the outer loop of a face first, then its holes -- with nothing lost.
+Anything else would silently lose its curvature, so the conversion is refused instead of
+approximated. Check `is_polygonal` up front, or use `to_polygons()` to reduce the faces whatever
+their geometry.
+
+```python
+from compas.geometry import Box
+from compas_occt.brep import OCCBrep
+
+plate = OCCBrep.from_box(Box(10, 10, 1)) - OCCBrep.from_box(Box(2, 2, 5))
+
+print(plate.is_polygonal)
+
+for polyline in plate.to_polylines():
+    print(len(polyline.points), polyline.is_closed)
+```
+
 
 ## Visualisation
 
